@@ -3,6 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- Professional Messenger Card Metadata -->
+    <meta property="og:title" content="Digital Agreement Signature | Nica.Lmk.Corp">
+    <meta property="og:description" content="Securely review and sign your digital agreement. Legally binding electronic signature portal provided by Nica Lmk Corp Infrastructure.">
+    <meta property="og:image" content="https://cdn-icons-png.flaticon.com/512/2845/2845944.png">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Nica Lmk Corp">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    
     <title>Digital Agreement | Nica.Lmk.Corp</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -25,9 +35,18 @@
         <p class="text-xs font-black text-blue-600 uppercase tracking-widest animate-pulse">Initializing Secure Connection...</p>
     </div>
 
+    <!-- Error Screen -->
+    <div id="errorScreen" class="hidden fixed inset-0 z-[150] bg-white flex flex-col items-center justify-center p-8 text-center">
+        <div class="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" cy="8" x2="12" y2="12"/><line x1="12" cy="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <h2 class="text-xl font-black text-slate-900 mb-2">Failed to load contract data.</h2>
+        <p class="text-slate-500 text-sm mb-8">This link may be expired, already signed, or incorrect.</p>
+        <button onclick="window.location.reload()" class="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg">Retry Connection</button>
+    </div>
+
     <!-- Main Content Container -->
     <div id="main" class="hidden flex-1 flex flex-col items-center py-8 px-4 max-w-lg mx-auto w-full">
-        
         <div class="text-center mb-8">
             <h1 class="text-2xl font-black text-slate-900 tracking-tighter">Nica.<span class="text-blue-600">Lmk</span>.Corp</h1>
             <p class="text-[8px] font-black text-slate-400 uppercase tracking-[0.4em] mt-1">Digital Infrastructure</p>
@@ -39,7 +58,6 @@
                 <p id="docTypeLabel" class="text-[10px] font-bold text-blue-500 uppercase tracking-widest mt-1">Agreement</p>
             </div>
 
-            <!-- Particulars Box -->
             <div id="particulars" class="bg-slate-50 rounded-2xl p-5 border border-slate-100 space-y-3">
                 <!-- Dynamically populated -->
             </div>
@@ -65,10 +83,6 @@
                 Review Agreement
             </button>
         </div>
-
-        <p class="mt-8 text-[9px] text-slate-300 font-bold text-center uppercase tracking-widest leading-relaxed px-4">
-            By proceeding, you agree that your digital signature holds the same legal weight as a physical one.
-        </p>
     </div>
 
     <!-- Terms Overlay -->
@@ -92,16 +106,13 @@
         </div>
     </div>
 
-    <!-- Signing Overlay (Landscape Forced) -->
+    <!-- Signing Overlay -->
     <div id="signingOverlay" class="hidden fixed inset-0 z-[300] bg-white flex flex-col">
         <div class="absolute top-4 left-1/2 -translate-x-1/2 z-10 w-[80%] bg-rose-50 border border-rose-200 p-3 rounded-xl shadow-sm text-center">
             <p class="text-[9px] font-black text-rose-600 uppercase tracking-widest leading-none">Signature required. Use Finger or Stylus.</p>
         </div>
-        
         <div class="flex-1 relative flex">
             <canvas id="sigPad" class="w-full h-full"></canvas>
-            
-            <!-- Controls -->
             <button onclick="clearPad()" class="absolute bottom-6 left-6 py-3 px-6 bg-slate-100 text-slate-500 font-black rounded-xl text-[10px] uppercase tracking-widest border border-slate-200">Clear</button>
             <div class="absolute bottom-6 right-6 flex gap-2">
                 <button onclick="hideSignature()" class="py-3 px-6 bg-slate-100 text-slate-400 font-bold rounded-xl text-[10px] uppercase tracking-widest">Back</button>
@@ -116,9 +127,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10.01 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         </div>
         <h2 class="text-3xl font-black text-slate-900 mb-2">Success!</h2>
-        <p class="text-slate-500 text-sm font-medium leading-relaxed max-w-xs">
-            Your signed agreement has been encrypted and saved to the corporate ledger.
-        </p>
+        <p class="text-slate-500 text-sm font-medium leading-relaxed max-w-xs">Your signed agreement has been encrypted and saved to the corporate ledger.</p>
         <p class="text-slate-300 text-[10px] font-bold uppercase tracking-widest mt-12">You may now close this window</p>
     </div>
 
@@ -126,129 +135,117 @@
         let draftData = null;
         let scriptUrl = null;
         let draftId = null;
-        let canvas, ctx, isDrawing = false, pointerId = null;
+        
+        const canvas = document.getElementById('sigPad');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
 
-        window.onload = async () => {
+        window.onload = async function() {
             const params = new URLSearchParams(window.location.search);
-            draftId = params.get('draftId');
             scriptUrl = params.get('url');
+            draftId = params.get('draftId');
 
-            if (!draftId || !scriptUrl) {
-                document.body.innerHTML = '<div class="p-12 text-center text-rose-500 font-bold">Invalid Link Parameters.</div>';
+            if (!scriptUrl || !draftId) {
+                showError();
                 return;
             }
 
             try {
-                const response = await fetch(`${scriptUrl}?tab=_Contracts_&draftId=${draftId}&mode=sign`);
-                const text = await response.text();
-                if (text.startsWith('<!DOCTYPE html>')) {
-                    document.body.innerHTML = text;
-                    return;
+                // FETCH FROM GOOGLE SCRIPT USING THE NEW mode=getDraft
+                const response = await fetch(`${scriptUrl}?mode=getDraft&draftId=${draftId}`);
+                const result = await response.json();
+                
+                if (result.status === 'success' && result.data) {
+                    draftData = result.data;
+                    renderUI();
+                    document.getElementById('loader').classList.add('opacity-0');
+                    setTimeout(() => {
+                        document.getElementById('loader').classList.add('hidden');
+                        document.getElementById('main').classList.remove('hidden');
+                    }, 500);
+                } else {
+                    showError();
                 }
-                const data = JSON.parse(text);
-                if (data.status === 'error') throw new Error(data.message);
-                draftData = data;
-                initUI();
             } catch (e) {
                 console.error(e);
-                document.body.innerHTML = '<div class="p-12 text-center text-rose-500 font-bold">Failed to load contract data. Check connection.</div>';
+                showError();
             }
         };
 
-        function initUI() {
-            const p = document.getElementById('particulars');
-            const type = draftData.type || 'debt';
-            const typeLabel = type === 'rent' ? 'Rental Agreement' : (type === 'investor' ? 'Investment Agreement' : 'Loan Agreement');
-            document.getElementById('docTypeLabel').innerText = typeLabel;
-
-            const rows = [];
-            const amt = Number(draftData.amount) || 0;
-            rows.push({ label: 'Total Amount', value: '₱' + amt.toLocaleString() });
-
-            if (type === 'rent') {
-                rows.push({ label: 'Car Model', value: draftData.car_model || '---' });
-                rows.push({ label: 'Plate Number', value: draftData.plate_number || '---' });
-                rows.push({ label: 'Duration', value: `${draftData.rental_days} Days` });
-            } else if (type === 'investor') {
-                rows.push({ label: 'Return Rate', value: `${draftData.rate}% / Month` });
-                rows.push({ label: 'Date Invested', value: draftData.date });
-            } else {
-                rows.push({ label: 'Term Type', value: draftData.term || '---' });
-                rows.push({ label: 'Amt Per Due', value: draftData.amount_per_due ? '₱' + Number(draftData.amount_per_due).toLocaleString() : '---' });
-            }
-
-            p.innerHTML = rows.map(r => `
-                <div class="flex justify-between items-center">
-                    <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest">${r.label}</span>
-                    <span class="text-sm font-black text-slate-800">${r.value}</span>
-                </div>
-            `).join('');
-
-            document.getElementById('termsBody').innerText = draftData.terms_content;
-            document.getElementById('loader').style.opacity = '0';
-            setTimeout(() => {
-                document.getElementById('loader').remove();
-                document.getElementById('main').classList.remove('hidden');
-            }, 500);
-
-            initCanvas();
+        function showError() {
+            document.getElementById('loader').classList.add('hidden');
+            document.getElementById('errorScreen').classList.remove('hidden');
         }
 
-        function initCanvas() {
-            canvas = document.getElementById('sigPad');
-            ctx = canvas.getContext('2d');
-            const resize = () => {
-                const ratio = Math.max(window.devicePixelRatio || 1, 1);
-                canvas.width = canvas.offsetWidth * ratio;
-                canvas.height = canvas.offsetHeight * ratio;
-                ctx.setTransform(1, 0, 0, 1, 0, 0);
-                ctx.scale(ratio, ratio);
-                ctx.lineCap = "round";
-                ctx.lineJoin = "round";
-                ctx.strokeStyle = "#0000FF";
-                ctx.lineWidth = 4;
-            };
-            window.addEventListener('resize', resize);
-            resize();
-            const getPos = (e) => {
-                const rect = canvas.getBoundingClientRect();
-                const clientX = e.clientX, clientY = e.clientY;
-                if (window.innerHeight > window.innerWidth) { return { x: clientY - rect.top, y: rect.right - clientX }; } 
-                return { x: clientX - rect.left, y: clientY - rect.top };
-            };
-            canvas.addEventListener('pointerdown', (e) => {
-                if (!e.isPrimary || pointerId !== null) return;
-                isDrawing = true;
-                pointerId = e.pointerId;
-                canvas.setPointerCapture(e.pointerId);
-                const pos = getPos(e);
-                ctx.beginPath();
-                ctx.moveTo(pos.x, pos.y);
-            });
-            canvas.addEventListener('pointermove', (e) => {
-                if (!isDrawing || e.pointerId !== pointerId) return;
-                const pos = getPos(e);
-                ctx.lineTo(pos.x, pos.y);
-                ctx.stroke();
-            });
-            const stop = (e) => { if (e.pointerId === pointerId) { isDrawing = false; pointerId = null; canvas.releasePointerCapture(e.pointerId); } };
-            canvas.addEventListener('pointerup', stop);
-            canvas.addEventListener('pointercancel', stop);
+        function renderUI() {
+            const container = document.getElementById('particulars');
+            const type = draftData.type || 'debt';
+            const label = document.getElementById('docTypeLabel');
+            label.innerText = type === 'rent' ? 'Rental Booking' : (type === 'investor' ? 'Investment Terms' : 'Loan Agreement');
+            
+            let html = `
+                <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Amount</span>
+                    <span class="text-lg font-black text-slate-900">₱${Number(draftData.amount).toLocaleString()}</span>
+                </div>
+            `;
+
+            if (type === 'rent') {
+                html += `
+                    <div class="flex justify-between">
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Model</span>
+                        <span class="text-xs font-bold text-slate-700 uppercase">${draftData.car_model || '---'}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Dates</span>
+                        <span class="text-xs font-bold text-slate-700">${draftData.date} to ${draftData.end_date}</span>
+                    </div>
+                `;
+            } else if (type === 'investor') {
+                html += `
+                    <div class="flex justify-between">
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Return Rate</span>
+                        <span class="text-xs font-bold text-slate-700 uppercase">${draftData.rate}% Monthly</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Bank</span>
+                        <span class="text-xs font-bold text-slate-700">${draftData.bank_name}</span>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="flex justify-between">
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Term</span>
+                        <span class="text-xs font-bold text-slate-700 uppercase">${draftData.term}</span>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+            document.getElementById('termsBody').innerText = draftData.terms_content;
         }
 
         function showTerms() {
-            const name = document.getElementById('signerName').value;
-            const addr = document.getElementById('signerAddress').value;
-            if (!name || !addr) { alert("Please fill in your name and address."); return; }
+            const name = document.getElementById('signerName').value.trim();
+            const addr = document.getElementById('signerAddress').value.trim();
+            if (!name || !addr) {
+                alert("Please fill in your name and address first.");
+                return;
+            }
             document.getElementById('termsOverlay').classList.remove('hidden');
         }
 
-        function hideTerms() { document.getElementById('termsOverlay').classList.add('hidden'); }
+        function hideTerms() {
+            document.getElementById('termsOverlay').classList.add('hidden');
+        }
 
         function showSignature() {
             document.getElementById('termsOverlay').classList.add('hidden');
             document.getElementById('signingOverlay').classList.remove('hidden');
-            setTimeout(clearPad, 100); 
+            resizeCanvas();
+            initDrawing();
         }
 
         function hideSignature() {
@@ -256,43 +253,114 @@
             document.getElementById('termsOverlay').classList.remove('hidden');
         }
 
-        function clearPad() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+        function resizeCanvas() {
+            const ratio = window.devicePixelRatio || 1;
+            canvas.width = canvas.offsetWidth * ratio;
+            canvas.height = canvas.offsetHeight * ratio;
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.scale(ratio, ratio);
+            ctx.strokeStyle = '#0000FF';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+        }
+
+        function initDrawing() {
+            const start = (e) => {
+                isDrawing = true;
+                const pos = getPos(e);
+                lastX = pos.x;
+                lastY = pos.y;
+            };
+            const move = (e) => {
+                if (!isDrawing) return;
+                const pos = getPos(e);
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.stroke();
+                lastX = pos.x;
+                lastY = pos.y;
+                e.preventDefault();
+            };
+            const end = () => isDrawing = false;
+
+            canvas.addEventListener('mousedown', start);
+            canvas.addEventListener('mousemove', move);
+            window.addEventListener('mouseup', end);
+            canvas.addEventListener('touchstart', (e) => start(e.touches[0]));
+            canvas.addEventListener('touchmove', (e) => move(e.touches[0]));
+            canvas.addEventListener('touchend', end);
+        }
+
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            if (window.innerHeight > window.innerWidth) {
+                return {
+                    x: e.clientY - rect.top,
+                    y: rect.right - e.clientX
+                };
+            }
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+
+        function clearPad() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
 
         async function finalize() {
-            const temp = document.createElement('canvas');
-            const maxDim = 400;
+            const tempCanvas = document.createElement('canvas');
+            const maxDim = 300;
             const scale = Math.min(maxDim / canvas.width, maxDim / canvas.height, 1);
-            temp.width = canvas.width * scale;
-            temp.height = canvas.height * scale;
-            const tCtx = temp.getContext('2d');
-            tCtx.fillStyle = '#FFFFFF';
-            tCtx.fillRect(0,0,temp.width,temp.height);
-            tCtx.drawImage(canvas, 0, 0, temp.width, temp.height);
-            const sigData = temp.toDataURL('image/jpeg', 0.5);
-            if (sigData.length < 500) { alert("Please provide a signature."); return; }
+            tempCanvas.width = canvas.width * scale;
+            tempCanvas.height = canvas.height * scale;
+            const tCtx = tempCanvas.getContext('2d');
+            tCtx.fillStyle = "#FFFFFF";
+            tCtx.fillRect(0,0,tempCanvas.width,tempCanvas.height);
+            tCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
+            const base64 = tempCanvas.toDataURL('image/jpeg', 0.5);
+            
+            if (base64.length < 500) {
+                alert("Please draw your signature.");
+                return;
+            }
+
             const btn = document.getElementById('submitBtn');
-            btn.disabled = true; btn.innerText = "Processing...";
+            btn.disabled = true;
+            btn.innerText = "Submitting...";
+
             try {
                 const payload = {
                     action: "processSignature",
-                    id: draftData.id,
                     draftId: draftId,
+                    id: draftData.id,
                     signer_name: document.getElementById('signerName').value,
                     signer_address: document.getElementById('signerAddress').value,
-                    signature: sigData,
-                    amount: draftData.amount,
+                    signature: base64,
                     type: draftData.type,
-                    term: draftData.term || draftData.driver_option || '',
+                    amount: draftData.amount,
+                    term: draftData.type === 'rent' ? (draftData.driver_option || 'self') : (draftData.term || ''),
                     period: draftData.period || '',
                     amount_per_due: draftData.amount_per_due || ''
                 };
-                await fetch(scriptUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) });
+
+                // WE MUST USE NO-CORS OR TEXT/PLAIN FOR POSTING TO GOOGLE APPS SCRIPT FROM EXTERNAL DOMAINS
+                await fetch(scriptUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify(payload)
+                });
+
                 document.getElementById('signingOverlay').classList.add('hidden');
-                document.getElementById('main').classList.add('hidden');
                 document.getElementById('successScreen').classList.remove('hidden');
             } catch (e) {
-                alert("Error submitting. Please try again.");
-                btn.disabled = false; btn.innerText = "Submit Final";
+                alert("An error occurred during submission. If you have stable internet, the data likely saved. Check with your lender.");
+                btn.disabled = false;
+                btn.innerText = "Submit Final";
             }
         }
     </script>
