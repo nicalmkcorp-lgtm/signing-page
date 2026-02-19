@@ -25,9 +25,12 @@
         }
         .animate-pop { animation: pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
         @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
+        /* Ensure inputs have enough space to scroll above keyboard */
+        .keyboard-spacer { height: 50vh; pointer-events: none; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col overflow-x-hidden">
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col overflow-x-hidden overflow-y-auto">
 
     <!-- Loading Screen -->
     <div id="loader" class="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center p-8 transition-opacity duration-500">
@@ -68,14 +71,21 @@
                 </p>
             </div>
 
+            <!-- MANDATORY LEGAL NOTICE BOX -->
+            <div class="p-4 bg-amber-50 border border-amber-100 rounded-2xl shadow-sm">
+                <p class="text-[10px] font-black text-amber-800 text-center uppercase leading-relaxed tracking-tight">
+                    NOTICE: THIS DOCUMENT CONSTITUTES A BINDING PUBLIC AGREEMENT AND MAY BE USED FOR LEGAL PURPOSES IF NECESSARY. ALL DETAILS PROVIDED MUST BE TRUTHFUL AND LEGALLY ACCURATE.
+                </p>
+            </div>
+
             <div class="space-y-4">
                 <div class="space-y-1.5">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Your Full Name</label>
-                    <input type="text" id="signerName" placeholder="Enter Full Legal Name" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
+                    <input type="text" id="signerName" onfocus="handleInputFocus(this)" placeholder="Enter Full Legal Name" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
                 </div>
                 <div class="space-y-1.5">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current Address</label>
-                    <input type="text" id="signerAddress" placeholder="Enter Complete Address" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
+                    <input type="text" id="signerAddress" onfocus="handleInputFocus(this)" placeholder="Enter Complete Address" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
                 </div>
             </div>
 
@@ -83,6 +93,9 @@
                 Review Agreement
             </button>
         </div>
+        
+        <!-- Bottom Spacer to allow centering inputs when keyboard is active -->
+        <div class="keyboard-spacer"></div>
     </div>
 
     <!-- Terms Overlay -->
@@ -144,8 +157,16 @@
 
         window.onload = async function() {
             const params = new URLSearchParams(window.location.search);
+            
+            // Support shortened parameters
+            const scriptId = params.get('s');
+            draftId = params.get('d') || params.get('draftId');
             scriptUrl = params.get('url');
-            draftId = params.get('draftId');
+
+            // Reconstruct full script URL if ID provided
+            if (scriptId) {
+                scriptUrl = `https://script.google.com/macros/s/${scriptId}/exec`;
+            }
 
             if (!scriptUrl || !draftId) {
                 showError();
@@ -153,7 +174,7 @@
             }
 
             try {
-                // FETCH FROM GOOGLE SCRIPT USING THE NEW mode=getDraft
+                // FETCH FROM GOOGLE SCRIPT USING THE mode=getDraft
                 const response = await fetch(`${scriptUrl}?mode=getDraft&draftId=${draftId}`);
                 const result = await response.json();
                 
@@ -174,53 +195,124 @@
             }
         };
 
+        function handleInputFocus(el) {
+            // Wait for mobile keyboard to finish appearing
+            setTimeout(function() {
+                el.scrollIntoView({ behavior: "smooth", block: "center" });
+            }, 450);
+        }
+
         function showError() {
             document.getElementById('loader').classList.add('hidden');
             document.getElementById('errorScreen').classList.remove('hidden');
+        }
+
+        function getOrdinal(n) {
+            const s = ["th", "st", "nd", "rd"];
+            const v = n % 100;
+            return s[(v - 20) % 10] || s[v] || s[0];
         }
 
         function renderUI() {
             const container = document.getElementById('particulars');
             const type = draftData.type || 'debt';
             const label = document.getElementById('docTypeLabel');
-            label.innerText = type === 'rent' ? 'Rental Booking' : (type === 'investor' ? 'Investment Terms' : 'Loan Agreement');
+            
+            let mainLabel = "Total Amount";
+            if (type === 'rent') {
+                label.innerText = 'Rental Booking';
+                mainLabel = "Rental Price";
+            } else if (type === 'investor') {
+                label.innerText = 'Investment Terms';
+                mainLabel = "Principal Amount";
+            } else {
+                label.innerText = 'Loan Agreement';
+                mainLabel = "Loan Amount";
+            }
             
             let html = `
                 <div class="flex justify-between items-center pb-2 border-b border-slate-100">
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Amount</span>
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">${mainLabel}</span>
                     <span class="text-lg font-black text-slate-900">₱${Number(draftData.amount).toLocaleString()}</span>
                 </div>
             `;
 
             if (type === 'rent') {
+                const sDate = new Date(draftData.date);
+                const eDate = new Date(draftData.end_date);
+                let diffDays = Math.ceil(Math.abs(eDate - sDate) / (1000 * 60 * 60 * 24)) + 1;
+                if (isNaN(diffDays)) diffDays = 1;
+
                 html += `
                     <div class="flex justify-between">
-                        <span class="text-[9px] font-black text-slate-400 uppercase">Model</span>
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Car Model</span>
                         <span class="text-xs font-bold text-slate-700 uppercase">${draftData.car_model || '---'}</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-[9px] font-black text-slate-400 uppercase">Dates</span>
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Plate Number</span>
+                        <span class="text-xs font-bold text-slate-700 uppercase">${draftData.plate_number || '---'}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Rental Dates</span>
                         <span class="text-xs font-bold text-slate-700">${draftData.date} to ${draftData.end_date}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Rental Duration</span>
+                        <span class="text-xs font-bold text-slate-700">${diffDays} Day${diffDays > 1 ? 's' : ''}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Distance Limit</span>
+                        <span class="text-xs font-bold text-slate-700 uppercase">${draftData.distance_limit || (diffDays * 300)} km Total</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Driver Option</span>
+                        <span class="text-xs font-bold text-slate-700 uppercase">${draftData.driver_option === 'with_driver' ? 'With Driver' : 'Self Drive'}</span>
                     </div>
                 `;
             } else if (type === 'investor') {
+                const investDate = new Date(draftData.date);
+                const day = investDate.getDate();
+                const ordinal = getOrdinal(day);
+
                 html += `
                     <div class="flex justify-between">
                         <span class="text-[9px] font-black text-slate-400 uppercase">Return Rate</span>
                         <span class="text-xs font-bold text-slate-700 uppercase">${draftData.rate}% Monthly</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-[9px] font-black text-slate-400 uppercase">Bank</span>
-                        <span class="text-xs font-bold text-slate-700">${draftData.bank_name}</span>
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Monthly Payout Amount</span>
+                        <span class="text-xs font-bold text-slate-700 uppercase">₱${Number(draftData.payout_amount || 0).toLocaleString()}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Date Invested</span>
+                        <span class="text-xs font-bold text-slate-700">${draftData.date}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Payout Day</span>
+                        <span class="text-xs font-bold text-slate-700">Every ${day}${ordinal} of month</span>
                     </div>
                 `;
             } else {
+                // Debt (Loan) Agreement
                 html += `
                     <div class="flex justify-between">
-                        <span class="text-[9px] font-black text-slate-400 uppercase">Term</span>
-                        <span class="text-xs font-bold text-slate-700 uppercase">${draftData.term}</span>
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Term Type</span>
+                        <span class="text-xs font-bold text-slate-700 uppercase">${draftData.term || '---'}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Period</span>
+                        <span class="text-xs font-bold text-slate-700 uppercase">${draftData.period || '---'}</span>
                     </div>
                 `;
+                
+                if (draftData.amount_per_due && draftData.term !== 'One payment') {
+                    html += `
+                        <div class="flex justify-between">
+                            <span class="text-[9px] font-black text-slate-400 uppercase">Amount Per Period</span>
+                            <span class="text-xs font-bold text-slate-700 uppercase">₱${Number(draftData.amount_per_due).toLocaleString()}</span>
+                        </div>
+                    `;
+                }
             }
 
             container.innerHTML = html;
@@ -356,6 +448,7 @@
                 });
 
                 document.getElementById('signingOverlay').classList.add('hidden');
+                document.getElementById('main').classList.add('hidden');
                 document.getElementById('successScreen').classList.remove('hidden');
             } catch (e) {
                 alert("An error occurred during submission. If you have stable internet, the data likely saved. Check with your lender.");
