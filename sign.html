@@ -26,8 +26,9 @@
         .animate-pop { animation: pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
         @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         
-        /* Ensure inputs have enough space to scroll above keyboard */
-        .keyboard-spacer { height: 50vh; pointer-events: none; }
+        /* IMPROVED SCROLLING: Focused inputs sit higher with scroll-margin-top */
+        input { scroll-margin-top: 120px; }
+        .keyboard-spacer { height: 60vh; pointer-events: none; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col overflow-x-hidden overflow-y-auto">
@@ -158,12 +159,11 @@
         window.onload = async function() {
             const params = new URLSearchParams(window.location.search);
             
-            // Support shortened parameters
+            // Shortened parameter support
             const scriptId = params.get('s');
             draftId = params.get('d') || params.get('draftId');
             scriptUrl = params.get('url');
 
-            // Reconstruct full script URL if ID provided
             if (scriptId) {
                 scriptUrl = `https://script.google.com/macros/s/${scriptId}/exec`;
             }
@@ -174,7 +174,6 @@
             }
 
             try {
-                // FETCH FROM GOOGLE SCRIPT USING THE mode=getDraft
                 const response = await fetch(`${scriptUrl}?mode=getDraft&draftId=${draftId}`);
                 const result = await response.json();
                 
@@ -196,9 +195,9 @@
         };
 
         function handleInputFocus(el) {
-            // Wait for mobile keyboard to finish appearing
+            // Scroll HIGHER by using block: "start"
             setTimeout(function() {
-                el.scrollIntoView({ behavior: "smooth", block: "center" });
+                el.scrollIntoView({ behavior: "smooth", block: "start" });
             }, 450);
         }
 
@@ -293,7 +292,6 @@
                     </div>
                 `;
             } else {
-                // Debt (Loan) Agreement
                 html += `
                     <div class="flex justify-between">
                         <span class="text-[9px] font-black text-slate-400 uppercase">Term Type</span>
@@ -439,7 +437,6 @@
                     amount_per_due: draftData.amount_per_due || ''
                 };
 
-                // WE MUST USE NO-CORS OR TEXT/PLAIN FOR POSTING TO GOOGLE APPS SCRIPT FROM EXTERNAL DOMAINS
                 await fetch(scriptUrl, {
                     method: 'POST',
                     mode: 'no-cors',
@@ -451,7 +448,7 @@
                 document.getElementById('main').classList.add('hidden');
                 document.getElementById('successScreen').classList.remove('hidden');
             } catch (e) {
-                alert("An error occurred during submission. If you have stable internet, the data likely saved. Check with your lender.");
+                alert("An error occurred during submission. Try again.");
                 btn.disabled = false;
                 btn.innerText = "Submit Final";
             }
