@@ -155,6 +155,7 @@
         let isDrawing = false;
         let lastX = 0;
         let lastY = 0;
+        let hasSigned = false;
 
         window.onload = async function() {
             const params = new URLSearchParams(window.location.search);
@@ -358,6 +359,7 @@
         function initDrawing() {
             const start = (e) => {
                 isDrawing = true;
+                hasSigned = true;
                 const pos = getPos(e);
                 lastX = pos.x;
                 lastY = pos.y;
@@ -399,9 +401,15 @@
 
         function clearPad() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            hasSigned = false;
         }
 
         async function finalize() {
+            if (!hasSigned) {
+                alert("please sign first before finalizing");
+                return;
+            }
+
             const tempCanvas = document.createElement('canvas');
             const maxDim = 300;
             const scale = Math.min(maxDim / canvas.width, maxDim / canvas.height, 1);
@@ -413,11 +421,6 @@
             tCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
             const base64 = tempCanvas.toDataURL('image/jpeg', 0.5);
             
-            if (base64.length < 500) {
-                alert("Please draw your signature.");
-                return;
-            }
-
             const btn = document.getElementById('submitBtn');
             btn.disabled = true;
             btn.innerText = "Submitting...";
