@@ -126,7 +126,7 @@
             <p class="text-[9px] font-black text-rose-600 uppercase tracking-widest leading-none">Signature required. Use Finger or Stylus.</p>
         </div>
         <div class="flex-1 relative flex">
-            <canvas id="sigPad" class="w-full h-full"></canvas>
+            <canvas id="sigPad" class="w-full h-full landscape:h-[calc(100%-80px)]"></canvas>
             <button onclick="clearPad()" class="absolute bottom-6 left-6 py-3 px-6 bg-slate-100 text-slate-500 font-black rounded-xl text-[10px] uppercase tracking-widest border border-slate-200">Clear</button>
             <div class="absolute bottom-6 right-6 flex gap-2">
                 <button onclick="hideSignature()" class="py-3 px-6 bg-slate-100 text-slate-400 font-bold rounded-xl text-[10px] uppercase tracking-widest">Back</button>
@@ -356,7 +356,11 @@
             ctx.lineJoin = 'round';
         }
 
+        let isDrawingInitialized = false;
         function initDrawing() {
+            if (isDrawingInitialized) return;
+            isDrawingInitialized = true;
+            window.addEventListener('resize', resizeCanvas);
             const start = (e) => {
                 isDrawing = true;
                 hasSigned = true;
