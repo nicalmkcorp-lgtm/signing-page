@@ -20,9 +20,17 @@
         body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         #sigPad { touch-action: none; background: white; cursor: crosshair; }
+        
+        /* Ensure overlay strictly respects dynamic viewport height to avoid being pushed down by Messenger/browser headers */
+        #signingOverlay { width: 100vw; height: 100vh; height: 100dvh; }
+        
         @media screen and (orientation: portrait) {
-            #signingOverlay { transform: rotate(90deg); transform-origin: center; width: 100vh !important; height: 100vw !important; top: 50%; left: 50%; translate: -50% -50%; position: fixed; }
+            .is-iphone #signingOverlay { transform: rotate(90deg); transform-origin: center; width: 100vh !important; width: 100dvh !important; height: 100vw !important; top: 50%; left: 50%; translate: -50% -50%; position: fixed; }
         }
+        @media screen and (orientation: landscape) {
+            .is-iphone #signingOverlay { transform: none; width: 100vw !important; height: 100vh !important; height: 100dvh !important; top: 0; left: 0; translate: 0 0; position: fixed; }
+        }
+        
         .animate-pop { animation: pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
         @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         
@@ -121,15 +129,15 @@
     </div>
 
     <!-- Signing Overlay -->
-    <div id="signingOverlay" class="hidden fixed inset-0 z-[300] bg-white flex flex-col">
+    <div id="signingOverlay" class="hidden fixed inset-0 z-[300] bg-white flex flex-col overflow-hidden">
         <div class="absolute top-4 left-1/2 -translate-x-1/2 z-10 w-[80%] bg-rose-50 border border-rose-200 p-3 rounded-xl shadow-sm text-center">
             <p class="text-[9px] font-black text-rose-600 uppercase tracking-widest leading-none">Signature required. Use Finger or Stylus.</p>
         </div>
-        <div class="flex-1 relative flex">
+        <div class="flex-1 relative flex overflow-hidden">
             <canvas id="sigPad" class="w-full h-full"></canvas>
-            <button onclick="clearPad()" class="absolute bottom-6 left-6 py-3 px-6 bg-slate-100 text-slate-500 font-black rounded-xl text-[10px] uppercase tracking-widest border border-slate-200">Clear</button>
-            <div class="absolute bottom-6 right-6 flex gap-2">
-                <button onclick="hideSignature()" class="py-3 px-6 bg-slate-100 text-slate-400 font-bold rounded-xl text-[10px] uppercase tracking-widest">Back</button>
+            <button onclick="clearPad()" class="absolute left-6 py-3 px-6 bg-slate-100 text-slate-500 font-black rounded-xl text-[10px] uppercase tracking-widest border border-slate-200 shadow-lg z-50" style="bottom: max(1.5rem, env(safe-area-inset-bottom));">Clear</button>
+            <div class="absolute right-6 flex gap-2 z-50" style="bottom: max(1.5rem, env(safe-area-inset-bottom));">
+                <button onclick="hideSignature()" class="py-3 px-6 bg-slate-100 text-slate-400 font-bold rounded-xl text-[10px] uppercase tracking-widest shadow-lg">Back</button>
                 <button id="submitBtn" onclick="finalize()" class="py-3 px-8 bg-slate-900 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-lg">Submit Final</button>
             </div>
         </div>
@@ -146,6 +154,9 @@
     </div>
 
     <script>
+        const isIPhone = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        if (isIPhone) document.body.classList.add('is-iphone');
+
         let draftData = null;
         let scriptUrl = null;
         let draftId = null;
@@ -346,17 +357,40 @@
 
         function resizeCanvas() {
             const ratio = window.devicePixelRatio || 1;
-            canvas.width = canvas.offsetWidth * ratio;
-            canvas.height = canvas.offsetHeight * ratio;
+            const newWidth = canvas.offsetWidth * ratio;
+            const newHeight = canvas.offsetHeight * ratio;
+            
+            if (canvas.width === newWidth && canvas.height === newHeight) return;
+            
+            let tempCanvas = null;
+            if (hasSigned) {
+                tempCanvas = document.createElement('canvas');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = canvas.height;
+                tempCanvas.getContext('2d').drawImage(canvas, 0, 0);
+            }
+            
+            canvas.width = newWidth;
+            canvas.height = newHeight;
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.scale(ratio, ratio);
             ctx.strokeStyle = '#0000FF';
             ctx.lineWidth = 3;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
+            
+            if (tempCanvas && hasSigned) {
+                ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width / ratio, tempCanvas.height / ratio);
+            }
         }
 
+        let isDrawingInitialized = false;
         function initDrawing() {
+            if (isDrawingInitialized) return;
+            isDrawingInitialized = true;
+            window.addEventListener('resize', () => {
+                setTimeout(resizeCanvas, 150);
+            });
             const start = (e) => {
                 isDrawing = true;
                 hasSigned = true;
@@ -387,7 +421,7 @@
 
         function getPos(e) {
             const rect = canvas.getBoundingClientRect();
-            if (window.innerHeight > window.innerWidth) {
+            if (isIPhone && window.innerHeight > window.innerWidth) {
                 return {
                     x: e.clientY - rect.top,
                     y: rect.right - e.clientX
@@ -404,21 +438,69 @@
             hasSigned = false;
         }
 
+        function trimCanvas(sourceCanvas) {
+            const context = sourceCanvas.getContext('2d');
+            const width = sourceCanvas.width;
+            const height = sourceCanvas.height;
+            const imageData = context.getImageData(0, 0, width, height);
+            const data = imageData.data;
+
+            let top = height, bottom = 0, left = width, right = 0;
+            let found = false;
+
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const alpha = data[((y * width + x) * 4) + 3];
+                    if (alpha > 0) {
+                        if (x < left) left = x;
+                        if (x > right) right = x;
+                        if (y < top) top = y;
+                        if (y > bottom) bottom = y;
+                        found = true;
+                    }
+                }
+            }
+
+            if (!found) return sourceCanvas;
+
+            // Add some padding (scaled by devicePixelRatio if needed, but 20px is usually fine)
+            const padding = 20;
+            left = Math.max(0, left - padding);
+            top = Math.max(0, top - padding);
+            right = Math.min(width, right + padding);
+            bottom = Math.min(height, bottom + padding);
+
+            const trimWidth = right - left;
+            const trimHeight = bottom - top;
+
+            const trimmedCanvas = document.createElement('canvas');
+            trimmedCanvas.width = trimWidth;
+            trimmedCanvas.height = trimHeight;
+            const trimmedContext = trimmedCanvas.getContext('2d');
+
+            trimmedContext.drawImage(sourceCanvas, left, top, trimWidth, trimHeight, 0, 0, trimWidth, trimHeight);
+
+            return trimmedCanvas;
+        }
+
         async function finalize() {
             if (!hasSigned) {
                 alert("please sign first before finalizing");
                 return;
             }
 
+            // Trim the canvas to remove excessive white space around the signature
+            const trimmedCanvas = trimCanvas(canvas);
+
             const tempCanvas = document.createElement('canvas');
             const maxDim = 300;
-            const scale = Math.min(maxDim / canvas.width, maxDim / canvas.height, 1);
-            tempCanvas.width = canvas.width * scale;
-            tempCanvas.height = canvas.height * scale;
+            const scale = Math.min(maxDim / trimmedCanvas.width, maxDim / trimmedCanvas.height, 1);
+            tempCanvas.width = trimmedCanvas.width * scale;
+            tempCanvas.height = trimmedCanvas.height * scale;
             const tCtx = tempCanvas.getContext('2d');
             tCtx.fillStyle = "#FFFFFF";
             tCtx.fillRect(0,0,tempCanvas.width,tempCanvas.height);
-            tCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
+            tCtx.drawImage(trimmedCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
             const base64 = tempCanvas.toDataURL('image/jpeg', 0.5);
             
             const btn = document.getElementById('submitBtn');
