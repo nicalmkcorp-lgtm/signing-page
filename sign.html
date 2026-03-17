@@ -25,11 +25,14 @@
         #signingOverlay { width: 100vw; height: 100vh; height: 100dvh; }
         
         @media screen and (orientation: portrait) {
-            .is-iphone #signingOverlay { transform: rotate(90deg); transform-origin: center; width: 100vh !important; width: 100dvh !important; height: 100vw !important; top: 50%; left: 50%; translate: -50% -50%; position: fixed; }
+            #signingOverlay { transform: rotate(90deg); transform-origin: center; width: 100vh !important; width: 100dvh !important; height: 100vw !important; top: 50%; left: 50%; translate: -50% -50%; position: fixed; }
         }
         @media screen and (orientation: landscape) {
-            .is-iphone #signingOverlay { transform: none; width: 100vw !important; height: 100vh !important; height: 100dvh !important; top: 0; left: 0; translate: 0 0; position: fixed; }
+            #signingOverlay { transform: none; width: 100vw !important; height: 100vh !important; height: 100dvh !important; top: 0; left: 0; translate: 0 0; position: fixed; }
         }
+        
+        #clearBtn, #actionBtns { bottom: max(1.5rem, env(safe-area-inset-bottom)); }
+        .is-iphone #clearBtn, .is-iphone #actionBtns { bottom: 1.5rem !important; }
         
         .animate-pop { animation: pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
         @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -135,8 +138,8 @@
         </div>
         <div class="flex-1 relative flex overflow-hidden">
             <canvas id="sigPad" class="w-full h-full"></canvas>
-            <button onclick="clearPad()" class="absolute left-6 py-3 px-6 bg-slate-100 text-slate-500 font-black rounded-xl text-[10px] uppercase tracking-widest border border-slate-200 shadow-lg z-50" style="bottom: max(1.5rem, env(safe-area-inset-bottom));">Clear</button>
-            <div class="absolute right-6 flex gap-2 z-50" style="bottom: max(1.5rem, env(safe-area-inset-bottom));">
+            <button id="clearBtn" onclick="clearPad()" class="absolute left-6 py-3 px-6 bg-slate-100 text-slate-500 font-black rounded-xl text-[10px] uppercase tracking-widest border border-slate-200 shadow-lg z-50">Clear</button>
+            <div id="actionBtns" class="absolute right-6 flex gap-2 z-50">
                 <button onclick="hideSignature()" class="py-3 px-6 bg-slate-100 text-slate-400 font-bold rounded-xl text-[10px] uppercase tracking-widest shadow-lg">Back</button>
                 <button id="submitBtn" onclick="finalize()" class="py-3 px-8 bg-slate-900 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-lg">Submit Final</button>
             </div>
@@ -362,6 +365,19 @@
             
             if (canvas.width === newWidth && canvas.height === newHeight) return;
             
+            // For iPhone, use simpler logic from provided code
+            if (isIPhone) {
+                canvas.width = newWidth;
+                canvas.height = newHeight;
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.scale(ratio, ratio);
+                ctx.strokeStyle = '#0000FF';
+                ctx.lineWidth = 3;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                return;
+            }
+
             let tempCanvas = null;
             if (hasSigned) {
                 tempCanvas = document.createElement('canvas');
@@ -388,9 +404,14 @@
         function initDrawing() {
             if (isDrawingInitialized) return;
             isDrawingInitialized = true;
-            window.addEventListener('resize', () => {
-                setTimeout(resizeCanvas, 150);
-            });
+            
+            // Only add resize listener for non-iPhone (Android) to stay "as before"
+            if (!isIPhone) {
+                window.addEventListener('resize', () => {
+                    setTimeout(resizeCanvas, 150);
+                });
+            }
+            
             const start = (e) => {
                 isDrawing = true;
                 hasSigned = true;
@@ -421,7 +442,7 @@
 
         function getPos(e) {
             const rect = canvas.getBoundingClientRect();
-            if (isIPhone && window.innerHeight > window.innerWidth) {
+            if (window.innerHeight > window.innerWidth) {
                 return {
                     x: e.clientY - rect.top,
                     y: rect.right - e.clientX
@@ -489,18 +510,22 @@
                 return;
             }
 
-            // Trim the canvas to remove excessive white space around the signature
-            const trimmedCanvas = trimCanvas(canvas);
+            // For Android, keep the trim logic as it was working perfectly. 
+            // For iPhone, use the simpler logic from the provided code.
+            let sourceCanvas = canvas;
+            if (!isIPhone) {
+                sourceCanvas = trimCanvas(canvas);
+            }
 
             const tempCanvas = document.createElement('canvas');
             const maxDim = 300;
-            const scale = Math.min(maxDim / trimmedCanvas.width, maxDim / trimmedCanvas.height, 1);
-            tempCanvas.width = trimmedCanvas.width * scale;
-            tempCanvas.height = trimmedCanvas.height * scale;
+            const scale = Math.min(maxDim / sourceCanvas.width, maxDim / sourceCanvas.height, 1);
+            tempCanvas.width = sourceCanvas.width * scale;
+            tempCanvas.height = sourceCanvas.height * scale;
             const tCtx = tempCanvas.getContext('2d');
             tCtx.fillStyle = "#FFFFFF";
             tCtx.fillRect(0,0,tempCanvas.width,tempCanvas.height);
-            tCtx.drawImage(trimmedCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
+            tCtx.drawImage(sourceCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
             const base64 = tempCanvas.toDataURL('image/jpeg', 0.5);
             
             const btn = document.getElementById('submitBtn');
