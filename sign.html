@@ -15,6 +15,7 @@
     
     <title>Digital Agreement | Nica.Lmk.Corp</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -163,6 +164,7 @@
         let draftData = null;
         let scriptUrl = null;
         let draftId = null;
+        let supabase = null;
         
         const canvas = document.getElementById('sigPad');
         const ctx = canvas.getContext('2d');
@@ -174,9 +176,54 @@
         window.onload = async function() {
             const params = new URLSearchParams(window.location.search);
             
-            // Shortened parameter support
-            const scriptId = params.get('s');
+            const sbUrlParam = params.get('sb_url');
+            const sbKeyParam = params.get('sb_key');
             draftId = params.get('d') || params.get('draftId');
+
+            // Support Supabase Draft Loading
+            if (sbUrlParam && sbKeyParam && draftId) {
+                if (window.supabase) {
+                    supabase = window.supabase.createClient(sbUrlParam, sbKeyParam);
+                } else {
+                    console.error("Supabase CDN not loaded.");
+                    showError();
+                    return;
+                }
+
+                try {
+                    const { data, error } = await supabase
+                        .from('contracts')
+                        .select('*')
+                        .eq('id', draftId)
+                        .eq('status', 'draft')
+                        .maybeSingle();
+
+                    if (error) throw error;
+
+                    if (data && data.contract_data) {
+                        draftData = data.contract_data;
+                        // Keep database ID in draftData so we can update it properly or reference it
+                        if (!draftData.id) {
+                            draftData.id = draftId;
+                        }
+                        renderUI();
+                        document.getElementById('loader').classList.add('opacity-0');
+                        setTimeout(() => {
+                            document.getElementById('loader').classList.add('hidden');
+                            document.getElementById('main').classList.remove('hidden');
+                        }, 500);
+                    } else {
+                        showError();
+                    }
+                } catch (e) {
+                    console.error("Supabase draft load error:", e);
+                    showError();
+                }
+                return;
+            }
+
+            // Fallback: Google Apps Script Draft Loading
+            const scriptId = params.get('s');
             scriptUrl = params.get('url');
 
             if (scriptId) {
@@ -365,19 +412,6 @@
             
             if (canvas.width === newWidth && canvas.height === newHeight) return;
             
-            // For iPhone, use simpler logic from provided code
-            if (isIPhone) {
-                canvas.width = newWidth;
-                canvas.height = newHeight;
-                ctx.setTransform(1, 0, 0, 1, 0, 0);
-                ctx.scale(ratio, ratio);
-                ctx.strokeStyle = '#0000FF';
-                ctx.lineWidth = 3;
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                return;
-            }
-
             let tempCanvas = null;
             if (hasSigned) {
                 tempCanvas = document.createElement('canvas');
@@ -405,12 +439,9 @@
             if (isDrawingInitialized) return;
             isDrawingInitialized = true;
             
-            // Only add resize listener for non-iPhone (Android) to stay "as before"
-            if (!isIPhone) {
-                window.addEventListener('resize', () => {
-                    setTimeout(resizeCanvas, 150);
-                });
-            }
+            window.addEventListener('resize', () => {
+                setTimeout(resizeCanvas, 150);
+            });
             
             const start = (e) => {
                 isDrawing = true;
@@ -532,13 +563,54 @@
             btn.disabled = true;
             btn.innerText = "Submitting...";
 
+            const signerName = document.getElementById('signerName').value;
+            const signerAddress = document.getElementById('signerAddress').value;
+
+            // Support Supabase Submission
+            if (supabase) {
+                try {
+                    const updatedContractData = {
+                        ...draftData,
+                        signature: base64,
+                        signature_data: base64, // trigger expects signature_data in contract_data jsonb
+                        signerAddress: signerAddress,
+                        signer_address: signerAddress,
+                        signatureDate: new Date().toISOString(),
+                        signerName: signerName,
+                        signer_name: signerName
+                    };
+
+                    const { error: updateErr } = await supabase
+                        .from('contracts')
+                        .update({
+                            status: 'signed',
+                            person_name: signerName,
+                            contract_data: updatedContractData
+                        })
+                        .eq('id', draftId);
+
+                    if (updateErr) throw updateErr;
+
+                    document.getElementById('signingOverlay').classList.add('hidden');
+                    document.getElementById('main').classList.add('hidden');
+                    document.getElementById('successScreen').classList.remove('hidden');
+                } catch (e) {
+                    console.error("Supabase submit signature error:", e);
+                    alert("An error occurred during submission. Try again: " + (e.message || e));
+                    btn.disabled = false;
+                    btn.innerText = "Submit Final";
+                }
+                return;
+            }
+
+            // Fallback: Google Apps Script Submission
             try {
                 const payload = {
                     action: "processSignature",
                     draftId: draftId,
                     id: draftData.id,
-                    signer_name: document.getElementById('signerName').value,
-                    signer_address: document.getElementById('signerAddress').value,
+                    signer_name: signerName,
+                    signer_address: signerAddress,
                     signature: base64,
                     type: draftData.type,
                     amount: draftData.amount,
