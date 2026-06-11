@@ -231,7 +231,7 @@
         let draftData = null;
         let scriptUrl = null;
         let draftId = null;
-        let supabase = null;
+        let supabaseInstance = null;
         
         const canvas = document.getElementById('sigPad');
         const ctx = canvas.getContext('2d');
@@ -255,14 +255,14 @@
             // Support Supabase Draft Loading
             if (sbUrlParam && sbKeyParam && draftId) {
                 try {
-                    const sClient = window.supabase || (typeof supabase !== 'undefined' ? supabase : null);
+                    const sClient = window.supabase;
                     if (!sClient || typeof sClient.createClient !== 'function') {
                         throw new Error("Supabase Client SDK has failed to load completely. If you are blocking trackers, scripts, or using CDNs restrictions we recommend configuring fallback parameters.");
                     }
                     
-                    supabase = sClient.createClient(sbUrlParam, sbKeyParam);
+                    supabaseInstance = sClient.createClient(sbUrlParam, sbKeyParam);
                     
-                    const { data, error } = await supabase
+                    const { data, error } = await supabaseInstance
                         .from('contracts')
                         .select('*')
                         .eq('id', draftId)
@@ -663,7 +663,7 @@
             const signerAddress = document.getElementById('signerAddress').value;
 
             // Support Supabase Submission
-            if (supabase) {
+            if (supabaseInstance) {
                 try {
                     const updatedContractData = {
                         ...draftData,
@@ -676,7 +676,7 @@
                         signer_name: signerName
                     };
 
-                    const { error: updateErr } = await supabase
+                    const { error: updateErr } = await supabaseInstance
                         .from('contracts')
                         .update({
                             status: 'signed',
