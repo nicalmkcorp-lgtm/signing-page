@@ -39,7 +39,7 @@
         @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         
         /* IMPROVED SCROLLING: Focused inputs sit higher with scroll-margin-top */
-        input { scroll-margin-top: 250px; }
+        input { scroll-margin-top: 120px; }
         .keyboard-spacer { height: 60vh; pointer-events: none; }
     </style>
 </head>
@@ -201,7 +201,12 @@
         let lastY = 0;
         let hasSigned = false;
 
-        window.onload = async function() {
+        async function init() {
+            // Guard with a failsafe timeout of 12 seconds to prevent infinite spinning
+            const pageTimeout = setTimeout(() => {
+                showOnScreenError("Connection timeout. The cloud connection is taking too long to respond. Please check your internet connection and reload, or verify that your database credentials are correct.");
+            }, 12000);
+
             const params = new URLSearchParams(window.location.search);
             
             const sbUrlParam = params.get('sb_url');
@@ -215,6 +220,7 @@
                     supabase = sClient.createClient(sbUrlParam, sbKeyParam);
                 } else {
                     console.error("Supabase CDN loader failed to initialize global client.");
+                    clearTimeout(pageTimeout);
                     showError();
                     return;
                 }
@@ -236,17 +242,20 @@
                             draftData.id = draftId;
                         }
                         renderUI();
+                        clearTimeout(pageTimeout);
                         document.getElementById('loader').classList.add('opacity-0');
                         setTimeout(() => {
                             document.getElementById('loader').classList.add('hidden');
                             document.getElementById('main').classList.remove('hidden');
                         }, 500);
                     } else {
-                        showError();
+                        clearTimeout(pageTimeout);
+                        showOnScreenError("Contract draft not found. This can happen if the link is expired, already signed, or if Row-Level Security (RLS) is enabled on your Supabase 'contracts' table without SELECT and UPDATE policies configured.");
                     }
                 } catch (e) {
                     console.error("Supabase draft load error:", e);
-                    showError();
+                    clearTimeout(pageTimeout);
+                    showOnScreenError("Supabase error: " + (e.message || e));
                 }
                 return;
             }
@@ -260,6 +269,7 @@
             }
 
             if (!scriptUrl || !draftId) {
+                clearTimeout(pageTimeout);
                 showError();
                 return;
             }
@@ -271,19 +281,29 @@
                 if (result.status === 'success' && result.data) {
                     draftData = result.data;
                     renderUI();
+                    clearTimeout(pageTimeout);
                     document.getElementById('loader').classList.add('opacity-0');
                     setTimeout(() => {
                         document.getElementById('loader').classList.add('hidden');
                         document.getElementById('main').classList.remove('hidden');
                     }, 500);
                 } else {
+                    clearTimeout(pageTimeout);
                     showError();
                 }
             } catch (e) {
                 console.error(e);
-                showError();
+                clearTimeout(pageTimeout);
+                showOnScreenError("Google Script error: " + (e.message || e));
             }
-        };
+        }
+
+        // Run immediately when script is parsed, or wait for document list
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
 
         function handleInputFocus(el) {
             // Scroll HIGHER by using block: "start"
