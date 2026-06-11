@@ -14,8 +14,52 @@
     <meta property="og:image:height" content="630">
     
     <title>Digital Agreement | Nica.Lmk.Corp</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Failsafe error reporter that works before or after DOM Content is fully loaded
+        function showOnScreenError(text) {
+            console.error("Secure Portal Error:", text);
+            function apply() {
+                const spinner = document.getElementById('loader-spinner');
+                if (spinner) spinner.style.setProperty('display', 'none', 'important');
+                
+                const status = document.getElementById('loader-status');
+                if (status) {
+                    status.innerText = "Secure Link Paused";
+                    status.className = "text-[10px] font-black text-rose-500 uppercase tracking-widest";
+                }
+                
+                const errorText = document.getElementById('loader-error-text');
+                if (errorText) errorText.innerText = text;
+                
+                const errorBox = document.getElementById('loader-error');
+                if (errorBox) {
+                    errorBox.classList.remove('hidden');
+                    errorBox.style.setProperty('display', 'block', 'important');
+                }
+            }
+            if (document.body) {
+                apply();
+            } else {
+                document.addEventListener('DOMContentLoaded', apply);
+            }
+        }
+
+        // Catch evaluating or runtime syntax/execution issues at earliest load-phase
+        window.onerror = function(message, source, lineno, colno, error) {
+            const file = source ? source.split('/').pop() : 'script';
+            showOnScreenError("System Error: " + message + " (" + file + ":" + lineno + ")");
+            return false;
+        };
+        window.onunhandledrejection = function(event) {
+            const reason = event.reason ? (event.reason.message || event.reason) : "Uncaught Promise Rejection";
+            showOnScreenError("System Error: " + reason);
+        };
+    </script>
+    <script src="https://cdn.tailwindcss.com" onerror="showOnScreenError('Failed to load Tailwind CSS engine from CDN. Please check your network connection.')"></script>
+    <!-- Use UMD bundle instead of modern ESM default; with secondary fallback loader in case jsdelivr is blocked/slow -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" 
+            onerror="this.onerror=null; this.src='https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js'; window.supabase_fallback_active = true;" 
+            onload="console.log('Supabase Library Loaded Successfully')"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -172,31 +216,13 @@
             }
         }
 
+        // Failsafe hide/show element helpers
         function hideElement(id) {
             const el = document.getElementById(id);
             if (el) {
                 el.classList.add('hidden');
                 el.style.setProperty('display', 'none', 'important');
             }
-        }
-
-        // Global Error Catcher for easier debugging inside mobile webviews (Messenger/Chrome/Safari)
-        window.onerror = function(message, source, lineno, colno, error) {
-            showOnScreenError(message + " at line " + lineno + ":" + colno);
-            return false;
-        };
-        window.onunhandledrejection = function(event) {
-            showOnScreenError("Unhandled Rejection: " + (event.reason ? (event.reason.message || event.reason) : "Unknown Promise Error"));
-        };
-
-        function showOnScreenError(text) {
-            hideElement('loader-spinner');
-            hideElement('loader-status');
-            const errorText = document.getElementById('loader-error-text');
-            if (errorText) {
-                errorText.innerText = text;
-            }
-            showElement('loader-error', 'block');
         }
 
         const isIPhone = /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -228,17 +254,14 @@
 
             // Support Supabase Draft Loading
             if (sbUrlParam && sbKeyParam && draftId) {
-                const sClient = window.supabase || (typeof supabase !== 'undefined' ? supabase : null);
-                if (sClient && typeof sClient.createClient === 'function') {
-                    supabase = sClient.createClient(sbUrlParam, sbKeyParam);
-                } else {
-                    console.error("Supabase CDN loader failed to initialize global client.");
-                    clearTimeout(pageTimeout);
-                    showError();
-                    return;
-                }
-
                 try {
+                    const sClient = window.supabase || (typeof supabase !== 'undefined' ? supabase : null);
+                    if (!sClient || typeof sClient.createClient !== 'function') {
+                        throw new Error("Supabase Client SDK has failed to load completely. If you are blocking trackers, scripts, or using CDNs restrictions we recommend configuring fallback parameters.");
+                    }
+                    
+                    supabase = sClient.createClient(sbUrlParam, sbKeyParam);
+                    
                     const { data, error } = await supabase
                         .from('contracts')
                         .select('*')
@@ -250,7 +273,6 @@
 
                     if (data && data.contract_data) {
                         draftData = data.contract_data;
-                        // Keep database ID in draftData so we can update it properly or reference it
                         if (!draftData.id) {
                             draftData.id = draftId;
                         }
@@ -269,12 +291,12 @@
                         }
                     } else {
                         clearTimeout(pageTimeout);
-                        showOnScreenError("Contract draft not found. This can happen if the link is expired, already signed, or if Row-Level Security (RLS) is enabled on your Supabase 'contracts' table without SELECT and UPDATE policies configured.");
+                        showOnScreenError("Contract agreement draft not found on database. This can happen if the link is expired, has already been processed, or if Row-Level Security (RLS) is active but SELECT policies are missing on your contracts table.");
                     }
                 } catch (e) {
                     console.error("Supabase draft load error:", e);
                     clearTimeout(pageTimeout);
-                    showOnScreenError("Supabase error: " + (e.message || e));
+                    showOnScreenError("Database Client Connection Error: " + (e.message || e));
                 }
                 return;
             }
