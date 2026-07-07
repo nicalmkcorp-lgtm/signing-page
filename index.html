@@ -56,7 +56,7 @@
             showOnScreenError("System Error: " + reason);
         };
     </script>
-    <script src="https://cdn.tailwindcss.com" crossorigin="anonymous" onerror="showOnScreenError('Failed to load Tailwind CSS engine from CDN. Please check your network connection.')"></script>
+    <script src="./tailwind.js" onerror="this.onerror=null; this.src='https://cdn.tailwindcss.com'; this.onerror=function(){ showOnScreenError('Failed to load Tailwind CSS engine. Please check your network connection.'); };"></script>
     <!-- Use UMD bundle instead of modern ESM default; with secondary fallback loader in case jsdelivr is blocked/slow -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" crossorigin="anonymous"
             onerror="this.onerror=null; this.src='https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js'; window.supabase_fallback_active = true;" 
