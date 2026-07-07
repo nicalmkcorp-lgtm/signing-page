@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-
+    
     <!-- Professional Messenger Card Metadata -->
     <meta property="og:title" content="Digital Agreement Signature | Nica.Lmk.Corp">
     <meta property="og:description" content="Securely review and sign your digital agreement. Legally binding electronic signature portal provided by Nica Lmk Corp Infrastructure.">
@@ -83,9 +83,9 @@
         .animate-pop { animation: pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
         @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         
-        /* IMPROVED SCROLLING: Focused inputs sit slightly above the virtual keyboard */
-        input { scroll-margin-top: 100px; scroll-margin-bottom: 50px; }
-        .keyboard-spacer { display: none; height: 40vh; pointer-events: none; }
+        /* IMPROVED SCROLLING: Focused inputs sit higher with scroll-margin-top */
+        input { scroll-margin-top: 120px; }
+        .keyboard-spacer { display: none; height: 60vh; pointer-events: none; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col overflow-x-hidden overflow-y-auto">
@@ -118,7 +118,7 @@
             <p class="text-[8px] font-black text-slate-400 uppercase tracking-[0.4em] mt-1">Digital Infrastructure</p>
         </div>
 
-        <div id="agreementCard" class="w-full bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-100 space-y-6 transition-all duration-300">
+        <div class="w-full bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-100 space-y-6">
             <div class="text-center">
                 <h2 class="text-xl font-black text-slate-900">Agreement Details</h2>
                 <p id="docTypeLabel" class="text-[10px] font-bold text-blue-500 uppercase tracking-widest mt-1">Agreement</p>
@@ -353,173 +353,23 @@
             init();
         }
 
-        let layoutMaxHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-        let keyboardStateOpen = false;
-        let spotlightActive = false;
-        let blurTimeout = null;
-        let pollingTimer = null;
-        let lastFocusTime = 0;
-        let viewportShrunk = false;
-
-        function updateLayoutMaxHeight() {
-            const currentHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-            const active = document.activeElement;
-            const isInputActive = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
-            if (!isInputActive && currentHeight > layoutMaxHeight) {
-                layoutMaxHeight = currentHeight;
-            }
-        }
-
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', updateLayoutMaxHeight);
-        }
-        window.addEventListener('resize', updateLayoutMaxHeight);
-
-        function isKeyboardActive() {
-            const currentVisibleHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-            return currentVisibleHeight < (layoutMaxHeight - 120);
-        }
-
-        function showSpotlight() {
-            if (spotlightActive) return;
-            spotlightActive = true;
-            
-            const backdrop = document.getElementById('spotlightBackdrop');
-            if (backdrop) {
-                backdrop.classList.remove('opacity-0', 'pointer-events-none');
-                backdrop.classList.add('opacity-100', 'pointer-events-auto');
-            }
-            
-            const card = document.getElementById('agreementCard');
-            if (card) {
-                card.classList.add('relative', 'z-[85]', 'shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)]', 'scale-[1.01]', 'border-blue-100/50');
-            }
-        }
-
-        function hideSpotlight() {
-            if (!spotlightActive) return;
-            spotlightActive = false;
-            
-            const backdrop = document.getElementById('spotlightBackdrop');
-            if (backdrop) {
-                backdrop.classList.remove('opacity-100', 'pointer-events-auto');
-                backdrop.classList.add('opacity-0', 'pointer-events-none');
-            }
-            
-            const card = document.getElementById('agreementCard');
-            if (card) {
-                card.classList.remove('relative', 'z-[85]', 'shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)]', 'scale-[1.01]', 'border-blue-100/50');
-            }
-        }
-
-        function dismissKeyboardAndSpotlight() {
-            stopKeyboardPolling();
-            keyboardStateOpen = false;
-            viewportShrunk = false;
-            
-            const active = document.activeElement;
-            if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
-                active.blur();
-            }
-            
-            hideSpotlight();
-            
-            const spacer = document.querySelector('.keyboard-spacer');
-            if (spacer) {
-                spacer.style.display = 'none';
-            }
-            
-            // Smoothly scroll back to the bottom of the document
-            setTimeout(function() {
-                window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
-            }, 50);
-        }
-
-        function startKeyboardPolling() {
-            if (pollingTimer) clearInterval(pollingTimer);
-            viewportShrunk = false; // Reset on every new focus
-            pollingTimer = setInterval(function() {
-                const active = document.activeElement;
-                const isInputActive = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
-                
-                if (!isInputActive) {
-                    dismissKeyboardAndSpotlight();
-                    return;
-                }
-
-                // If the viewport has shrunk below threshold, it means this environment resizes the webview on keyboard show.
-                if (isKeyboardActive()) {
-                    viewportShrunk = true;
-                }
-
-                // If the keyboard environment supports visual viewport resizing, and the keyboard is no longer active, dismiss everything!
-                // We wait at least 1000ms after focus to allow the keyboard animation to start/finish.
-                if (viewportShrunk && (Date.now() - lastFocusTime > 1000)) {
-                    if (!isKeyboardActive()) {
-                        dismissKeyboardAndSpotlight();
-                    }
-                }
-            }, 100);
-        }
-
-        function stopKeyboardPolling() {
-            if (pollingTimer) {
-                clearInterval(pollingTimer);
-                pollingTimer = null;
-            }
-        }
-
         function handleInputFocus(el) {
-            if (blurTimeout) clearTimeout(blurTimeout);
-            
-            showSpotlight();
-            keyboardStateOpen = true;
-            lastFocusTime = Date.now();
-            startKeyboardPolling();
-            
             const spacer = document.querySelector('.keyboard-spacer');
             if (spacer) {
                 spacer.style.display = 'block';
             }
-            
-            // Compute static absolute top immediately to avoid moving-target bugs during keyboard opening
-            let absoluteTop = 0;
-            let currentEl = el;
-            while (currentEl) {
-                absoluteTop += currentEl.offsetTop;
-                currentEl = currentEl.offsetParent;
-            }
-            const targetScrollY = Math.max(0, absoluteTop - 110);
-            
-            // Scroll smoothly to the pre-calculated stable position
+            // Scroll HIGHER by using block: "start"
             setTimeout(function() {
-                window.scrollTo({ top: targetScrollY, behavior: "smooth" });
-            }, 100);
+                el.scrollIntoView({ behavior: "smooth", block: "start" });
+            }, 450);
         }
 
         function handleInputBlur() {
-            // Delay slightly to handle tab/focus transfer between inputs smoothly without flickering
-            blurTimeout = setTimeout(function() {
-                const active = document.activeElement;
-                const isInputActive = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
-                if (!isInputActive) {
-                    dismissKeyboardAndSpotlight();
-                }
-            }, 150);
-        }
-
-        // Tap outside of inputs to immediately hide keyboard, remove spacer, and dismiss spotlight
-        document.addEventListener('click', function(e) {
-            // Guard against delayed clicks during keyboard focus/layout shift
-            if (Date.now() - lastFocusTime < 600) return;
-
-            if (e.target && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && e.target.id !== 'spotlightBackdrop') {
-                const active = document.activeElement;
-                if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
-                    dismissKeyboardAndSpotlight();
-                }
+            const spacer = document.querySelector('.keyboard-spacer');
+            if (spacer) {
+                spacer.style.display = 'none';
             }
-        });
+        }
 
         function showError() {
             hideElement('loader');
@@ -894,7 +744,5 @@
             }
         }
     </script>
-    <!-- Spotlight Dimming Backdrop -->
-    <div id="spotlightBackdrop" onclick="dismissKeyboardAndSpotlight()" class="fixed inset-0 bg-slate-900/40 z-[80] backdrop-blur-[1px] opacity-0 pointer-events-none transition-all duration-300"></div>
 </body>
 </html>
