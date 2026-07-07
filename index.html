@@ -363,9 +363,10 @@
                 spacer.style.display = 'block';
             }
             
-            // Align input field smoothly centered in the remaining visible viewport above the keyboard
+            // Calculate precise scroll position to place focused input beautifully clear of the keyboard (about 110px from viewport top)
             setTimeout(function() {
-                el.scrollIntoView({ behavior: "smooth", block: "center" });
+                const targetScrollY = el.getBoundingClientRect().top + window.scrollY - 110;
+                window.scrollTo({ top: targetScrollY, behavior: "smooth" });
             }, 300);
         }
 
@@ -379,8 +380,8 @@
                     if (spacer) {
                         spacer.style.display = 'none';
                     }
-                    // Smoothly scroll back to top of page when keyboard goes away
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    // Smoothly scroll to the very bottom of the document to see the submit/review buttons clearly
+                    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
                 }
             }, 150);
         }
@@ -394,6 +395,33 @@
                 }
             }
         });
+
+        // Listen for visual viewport height changes to perfectly detect virtual keyboard opening/closing on iOS and Android (including back gesture, swipe, physical back button)
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', function() {
+                const spacer = document.querySelector('.keyboard-spacer');
+                const isKeyboardClosed = window.visualViewport.height >= (window.innerHeight - 60);
+                
+                if (isKeyboardClosed) {
+                    if (spacer) {
+                        spacer.style.display = 'none';
+                    }
+                    // If an input is still active when the keyboard is hidden, blur it for cleanliness
+                    const active = document.activeElement;
+                    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+                        active.blur();
+                    }
+                    // Smoothly scroll back to the bottom of the agreement form
+                    setTimeout(function() {
+                        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+                    }, 50);
+                } else {
+                    if (spacer) {
+                        spacer.style.display = 'block';
+                    }
+                }
+            });
+        }
 
         function showError() {
             hideElement('loader');
