@@ -46,6 +46,7 @@
 
         // Catch evaluating or runtime syntax/execution issues at earliest load-phase
         window.onerror = function(message, source, lineno, colno, error) {
+            if (message === 'Script error.') return true;
             const file = source ? source.split('/').pop() : 'script';
             showOnScreenError("System Error: " + message + " (" + file + ":" + lineno + ")");
             return false;
@@ -55,9 +56,9 @@
             showOnScreenError("System Error: " + reason);
         };
     </script>
-    <script src="https://cdn.tailwindcss.com" onerror="showOnScreenError('Failed to load Tailwind CSS engine from CDN. Please check your network connection.')"></script>
+    <script src="https://cdn.tailwindcss.com" crossorigin="anonymous" onerror="showOnScreenError('Failed to load Tailwind CSS engine from CDN. Please check your network connection.')"></script>
     <!-- Use UMD bundle instead of modern ESM default; with secondary fallback loader in case jsdelivr is blocked/slow -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" crossorigin="anonymous"
             onerror="this.onerror=null; this.src='https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js'; window.supabase_fallback_active = true;" 
             onload="console.log('Supabase Library Loaded Successfully')"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -83,8 +84,9 @@
         @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         
         /* IMPROVED SCROLLING: Focused inputs sit higher with scroll-margin-top */
-        input { scroll-margin-top: 250px; }
-        .keyboard-spacer { height: 60vh; pointer-events: none; }
+        input { scroll-margin-top: 120px; }
+        .keyboard-spacer { height: 0; transition: height 0.3s; pointer-events: none; }
+        .keyboard-spacer.active { height: 60vh; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col overflow-x-hidden overflow-y-auto">
@@ -143,11 +145,11 @@
             <div class="space-y-4">
                 <div class="space-y-1.5">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Your Full Name</label>
-                    <input type="text" id="signerName" onfocus="handleInputFocus(this)" placeholder="Enter Full Legal Name" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
+                    <input type="text" id="signerName" onfocus="handleInputFocus(this)" onblur="handleInputBlur(this)" placeholder="Enter Full Legal Name" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
                 </div>
                 <div class="space-y-1.5">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current Address</label>
-                    <input type="text" id="signerAddress" onfocus="handleInputFocus(this)" placeholder="Enter Complete Address" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
+                    <input type="text" id="signerAddress" onfocus="handleInputFocus(this)" onblur="handleInputBlur(this)" placeholder="Enter Complete Address" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
                 </div>
             </div>
 
@@ -157,7 +159,7 @@
         </div>
         
         <!-- Bottom Spacer to allow centering inputs when keyboard is active -->
-        <div class="keyboard-spacer"></div>
+        <div class="keyboard-spacer" id="keyboardSpacer"></div>
     </div>
 
     <!-- Terms Overlay -->
@@ -353,10 +355,19 @@
         }
 
         function handleInputFocus(el) {
+            document.getElementById("keyboardSpacer").classList.add("active");
             // Scroll HIGHER by using block: "start"
             setTimeout(function() {
                 el.scrollIntoView({ behavior: "smooth", block: "start" });
-            }, 450);
+            }, 300);
+        }
+
+        function handleInputBlur(el) {
+            setTimeout(function() {
+                if (document.activeElement.tagName !== "INPUT") {
+                    document.getElementById("keyboardSpacer").classList.remove("active");
+                }
+            }, 100);
         }
 
         function showError() {
