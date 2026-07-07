@@ -359,6 +359,7 @@
         let blurTimeout = null;
         let pollingTimer = null;
         let lastFocusTime = 0;
+        let viewportShrunk = false;
 
         function updateLayoutMaxHeight() {
             const currentHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
@@ -414,6 +415,7 @@
         function dismissKeyboardAndSpotlight() {
             stopKeyboardPolling();
             keyboardStateOpen = false;
+            viewportShrunk = false;
             
             const active = document.activeElement;
             if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
@@ -435,6 +437,7 @@
 
         function startKeyboardPolling() {
             if (pollingTimer) clearInterval(pollingTimer);
+            viewportShrunk = false; // Reset on every new focus
             pollingTimer = setInterval(function() {
                 const active = document.activeElement;
                 const isInputActive = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
@@ -444,8 +447,14 @@
                     return;
                 }
 
-                // If more than 1000ms has passed since focus, and the keyboard is no longer active, dismiss everything!
-                if (Date.now() - lastFocusTime > 1000) {
+                // If the viewport has shrunk below threshold, it means this environment resizes the webview on keyboard show.
+                if (isKeyboardActive()) {
+                    viewportShrunk = true;
+                }
+
+                // If the keyboard environment supports visual viewport resizing, and the keyboard is no longer active, dismiss everything!
+                // We wait at least 1000ms after focus to allow the keyboard animation to start/finish.
+                if (viewportShrunk && (Date.now() - lastFocusTime > 1000)) {
                     if (!isKeyboardActive()) {
                         dismissKeyboardAndSpotlight();
                     }
@@ -501,6 +510,9 @@
 
         // Tap outside of inputs to immediately hide keyboard, remove spacer, and dismiss spotlight
         document.addEventListener('click', function(e) {
+            // Guard against delayed clicks during keyboard focus/layout shift
+            if (Date.now() - lastFocusTime < 600) return;
+
             if (e.target && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && e.target.id !== 'spotlightBackdrop') {
                 const active = document.activeElement;
                 if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
