@@ -353,10 +353,31 @@
             init();
         }
 
+        let layoutMaxHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
         let keyboardStateOpen = false;
         let spotlightActive = false;
         let blurTimeout = null;
         let pollingTimer = null;
+        let lastFocusTime = 0;
+
+        function updateLayoutMaxHeight() {
+            const currentHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+            const active = document.activeElement;
+            const isInputActive = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
+            if (!isInputActive && currentHeight > layoutMaxHeight) {
+                layoutMaxHeight = currentHeight;
+            }
+        }
+
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', updateLayoutMaxHeight);
+        }
+        window.addEventListener('resize', updateLayoutMaxHeight);
+
+        function isKeyboardActive() {
+            const currentVisibleHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+            return currentVisibleHeight < (layoutMaxHeight - 120);
+        }
 
         function showSpotlight() {
             if (spotlightActive) return;
@@ -414,7 +435,6 @@
 
         function startKeyboardPolling() {
             if (pollingTimer) clearInterval(pollingTimer);
-            keyboardStateOpen = true; // Assume keyboard is opening on focus
             pollingTimer = setInterval(function() {
                 const active = document.activeElement;
                 const isInputActive = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
@@ -424,14 +444,10 @@
                     return;
                 }
 
-                if (window.visualViewport) {
-                    // Check if visual viewport is back to normal full-screen height (no keyboard overlay)
-                    const visible = window.visualViewport.height < (window.innerHeight - 120);
-                    if (!visible && keyboardStateOpen) {
-                        // Keyboard was closed (e.g. swiped closed in Messenger or device back key pressed)
+                // If more than 1000ms has passed since focus, and the keyboard is no longer active, dismiss everything!
+                if (Date.now() - lastFocusTime > 1000) {
+                    if (!isKeyboardActive()) {
                         dismissKeyboardAndSpotlight();
-                    } else if (visible && !keyboardStateOpen) {
-                        keyboardStateOpen = true;
                     }
                 }
             }, 100);
@@ -444,41 +460,12 @@
             }
         }
 
-        function checkKeyboardState() {
-            if (!window.visualViewport) return;
-            
-            const active = document.activeElement;
-            const isInputActive = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
-            if (!isInputActive) {
-                if (keyboardStateOpen) {
-                    dismissKeyboardAndSpotlight();
-                }
-                return;
-            }
-            
-            const visible = window.visualViewport.height < (window.innerHeight - 120);
-            if (keyboardStateOpen && !visible) {
-                dismissKeyboardAndSpotlight();
-            } else if (!keyboardStateOpen && visible) {
-                keyboardStateOpen = true;
-                showSpotlight();
-                const spacer = document.querySelector('.keyboard-spacer');
-                if (spacer) {
-                    spacer.style.display = 'block';
-                }
-            }
-        }
-
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', checkKeyboardState);
-        }
-        window.addEventListener('resize', checkKeyboardState);
-
         function handleInputFocus(el) {
             if (blurTimeout) clearTimeout(blurTimeout);
             
             showSpotlight();
             keyboardStateOpen = true;
+            lastFocusTime = Date.now();
             startKeyboardPolling();
             
             const spacer = document.querySelector('.keyboard-spacer');
@@ -486,11 +473,19 @@
                 spacer.style.display = 'block';
             }
             
-            // Calculate precise scroll position ONCE and scroll smoothly
+            // Compute static absolute top immediately to avoid moving-target bugs during keyboard opening
+            let absoluteTop = 0;
+            let currentEl = el;
+            while (currentEl) {
+                absoluteTop += currentEl.offsetTop;
+                currentEl = currentEl.offsetParent;
+            }
+            const targetScrollY = Math.max(0, absoluteTop - 110);
+            
+            // Scroll smoothly to the pre-calculated stable position
             setTimeout(function() {
-                const targetScrollY = el.getBoundingClientRect().top + window.scrollY - 110;
                 window.scrollTo({ top: targetScrollY, behavior: "smooth" });
-            }, 150);
+            }, 100);
         }
 
         function handleInputBlur() {
