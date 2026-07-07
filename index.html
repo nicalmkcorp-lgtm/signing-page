@@ -118,7 +118,7 @@
             <p class="text-[8px] font-black text-slate-400 uppercase tracking-[0.4em] mt-1">Digital Infrastructure</p>
         </div>
 
-        <div class="w-full bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-100 space-y-6">
+        <div id="agreementCard" class="w-full bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-100 space-y-6 transition-all duration-300">
             <div class="text-center">
                 <h2 class="text-xl font-black text-slate-900">Agreement Details</h2>
                 <p id="docTypeLabel" class="text-[10px] font-bold text-blue-500 uppercase tracking-widest mt-1">Agreement</p>
@@ -355,60 +355,91 @@
 
         let maxObservedHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
         let keyboardStateOpen = false;
+        let spotlightActive = false;
         let blurTimeout = null;
+
+        function showSpotlight() {
+            if (spotlightActive) return;
+            spotlightActive = true;
+            
+            const backdrop = document.getElementById('spotlightBackdrop');
+            if (backdrop) {
+                backdrop.classList.remove('opacity-0', 'pointer-events-none');
+                backdrop.classList.add('opacity-100', 'pointer-events-auto');
+            }
+            
+            const card = document.getElementById('agreementCard');
+            if (card) {
+                card.classList.add('relative', 'z-[85]', 'shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)]', 'scale-[1.01]', 'border-blue-100/50');
+            }
+        }
+
+        function hideSpotlight() {
+            if (!spotlightActive) return;
+            spotlightActive = false;
+            
+            const backdrop = document.getElementById('spotlightBackdrop');
+            if (backdrop) {
+                backdrop.classList.remove('opacity-100', 'pointer-events-auto');
+                backdrop.classList.add('opacity-0', 'pointer-events-none');
+            }
+            
+            const card = document.getElementById('agreementCard');
+            if (card) {
+                card.classList.remove('relative', 'z-[85]', 'shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)]', 'scale-[1.01]', 'border-blue-100/50');
+            }
+        }
+
+        function dismissKeyboardAndSpotlight() {
+            const active = document.activeElement;
+            if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+                active.blur();
+            }
+            
+            hideSpotlight();
+            
+            const spacer = document.querySelector('.keyboard-spacer');
+            if (spacer) {
+                spacer.style.display = 'none';
+            }
+            
+            // Smoothly scroll back to the bottom of the document
+            setTimeout(function() {
+                window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+            }, 50);
+        }
 
         function checkKeyboardState() {
             if (!window.visualViewport) return;
             
             const currentHeight = window.visualViewport.height;
-            // Always update maxObservedHeight to the largest height seen (keyboard fully closed)
             if (currentHeight > maxObservedHeight) {
                 maxObservedHeight = currentHeight;
             }
             
             const spacer = document.querySelector('.keyboard-spacer');
-            
-            // Hysteresis thresholds to avoid race conditions during keyboard opening/closing animations
-            const thresholdClosed = maxObservedHeight - 50;  // Height is very close to full screen
-            const thresholdOpen = maxObservedHeight - 150;    // Height is significantly reduced
+            const thresholdClosed = maxObservedHeight - 60; // Close to full height
+            const thresholdOpen = maxObservedHeight - 120;  // Significantly smaller
             
             if (currentHeight >= thresholdClosed) {
                 // Keyboard is definitely CLOSED
-                if (keyboardStateOpen) {
-                    keyboardStateOpen = false;
-                    
-                    if (spacer) {
-                        spacer.style.display = 'none';
-                    }
-                    
-                    // Blur any active inputs so cursor goes away and keyboard can be re-opened cleanly
-                    const active = document.activeElement;
-                    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
-                        active.blur();
-                    }
-                    
-                    // Smoothly scroll to the very bottom of the document to see the buttons clearly
-                    setTimeout(function() {
-                        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
-                    }, 50);
-                }
+                keyboardStateOpen = false;
+                dismissKeyboardAndSpotlight();
             } else if (currentHeight <= thresholdOpen) {
                 // Keyboard is definitely OPEN
-                if (!keyboardStateOpen) {
-                    keyboardStateOpen = true;
-                    
-                    if (spacer) {
-                        spacer.style.display = 'block';
-                    }
-                    
-                    const active = document.activeElement;
-                    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
-                        // Place input beautifully high up (80px from viewport top) so it's perfectly visible
-                        setTimeout(function() {
-                            const targetScrollY = active.getBoundingClientRect().top + window.scrollY - 80;
-                            window.scrollTo({ top: targetScrollY, behavior: "smooth" });
-                        }, 50);
-                    }
+                keyboardStateOpen = true;
+                showSpotlight();
+                if (spacer) {
+                    spacer.style.display = 'block';
+                }
+                
+                const active = document.activeElement;
+                if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+                    // Smoothly center the input 110px from top
+                    setTimeout(function() {
+                        const targetScrollY = active.getBoundingClientRect().top + window.scrollY - 110;
+                        window.scrollTo({ top: targetScrollY, behavior: "smooth" });
+                    }, 50);
                 }
             }
         }
@@ -422,40 +453,37 @@
         function handleInputFocus(el) {
             if (blurTimeout) clearTimeout(blurTimeout);
             
+            showSpotlight();
+            
             const spacer = document.querySelector('.keyboard-spacer');
             if (spacer) {
                 spacer.style.display = 'block';
             }
             
-            // Calculate precise scroll position to place focused input beautifully clear of the keyboard (about 80px from viewport top)
+            // Calculate precise scroll position to place focused input beautifully clear of the keyboard (about 110px from viewport top)
             setTimeout(function() {
-                const targetScrollY = el.getBoundingClientRect().top + window.scrollY - 80;
+                const targetScrollY = el.getBoundingClientRect().top + window.scrollY - 110;
                 window.scrollTo({ top: targetScrollY, behavior: "smooth" });
             }, 100);
         }
 
         function handleInputBlur() {
-            // Delay slightly to prevent spacer disappearing when shifting between input fields
+            // Delay slightly to handle tab/focus transfer between inputs smoothly without flickering
             blurTimeout = setTimeout(function() {
                 const active = document.activeElement;
                 const isInputActive = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
-                if (!isInputActive && !keyboardStateOpen) {
-                    const spacer = document.querySelector('.keyboard-spacer');
-                    if (spacer) {
-                        spacer.style.display = 'none';
-                    }
-                    // Smoothly scroll to the very bottom of the document to see the submit/review buttons clearly
-                    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+                if (!isInputActive) {
+                    dismissKeyboardAndSpotlight();
                 }
             }, 150);
         }
 
-        // Tap outside of inputs to immediately hide keyboard and remove spacer
+        // Tap outside of inputs to immediately hide keyboard, remove spacer, and dismiss spotlight
         document.addEventListener('click', function(e) {
-            if (e.target && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+            if (e.target && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && e.target.id !== 'spotlightBackdrop') {
                 const active = document.activeElement;
                 if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
-                    active.blur();
+                    dismissKeyboardAndSpotlight();
                 }
             }
         });
@@ -833,5 +861,7 @@
             }
         }
     </script>
+    <!-- Spotlight Dimming Backdrop -->
+    <div id="spotlightBackdrop" onclick="dismissKeyboardAndSpotlight()" class="fixed inset-0 bg-slate-900/40 z-[80] backdrop-blur-[1px] opacity-0 pointer-events-none transition-all duration-300"></div>
 </body>
 </html>
