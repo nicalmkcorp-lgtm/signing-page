@@ -85,7 +85,7 @@
         
         /* IMPROVED SCROLLING: Focused inputs sit higher with scroll-margin-top */
         input { scroll-margin-top: 120px; }
-        .keyboard-spacer { height: 60vh; pointer-events: none; }
+        .keyboard-spacer { display: none; height: 60vh; pointer-events: none; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col overflow-x-hidden overflow-y-auto">
@@ -144,11 +144,11 @@
             <div class="space-y-4">
                 <div class="space-y-1.5">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Your Full Name</label>
-                    <input type="text" id="signerName" onfocus="handleInputFocus(this)" placeholder="Enter Full Legal Name" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
+                    <input type="text" id="signerName" onfocus="handleInputFocus(this)" onblur="handleInputBlur()" placeholder="Enter Full Legal Name" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
                 </div>
                 <div class="space-y-1.5">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current Address</label>
-                    <input type="text" id="signerAddress" onfocus="handleInputFocus(this)" placeholder="Enter Complete Address" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
+                    <input type="text" id="signerAddress" onfocus="handleInputFocus(this)" onblur="handleInputBlur()" placeholder="Enter Complete Address" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
                 </div>
             </div>
 
@@ -354,10 +354,21 @@
         }
 
         function handleInputFocus(el) {
+            const spacer = document.querySelector('.keyboard-spacer');
+            if (spacer) {
+                spacer.style.display = 'block';
+            }
             // Scroll HIGHER by using block: "start"
             setTimeout(function() {
                 el.scrollIntoView({ behavior: "smooth", block: "start" });
             }, 450);
+        }
+
+        function handleInputBlur() {
+            const spacer = document.querySelector('.keyboard-spacer');
+            if (spacer) {
+                spacer.style.display = 'none';
+            }
         }
 
         function showError() {
