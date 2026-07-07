@@ -393,6 +393,7 @@
 
         function dismissKeyboardAndSpotlight() {
             stopKeyboardPolling();
+            keyboardStateOpen = false;
             
             const active = document.activeElement;
             if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
@@ -414,18 +415,28 @@
 
         function startKeyboardPolling() {
             if (pollingTimer) clearInterval(pollingTimer);
+            keyboardStateOpen = false;
             pollingTimer = setInterval(function() {
                 const currentHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
                 
                 // Track maxObservedHeight dynamically when keyboard is closed
                 const active = document.activeElement;
                 const isInputActive = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
-                if (!isInputActive && currentHeight > maxObservedHeight) {
+                if (!isInputActive) {
+                    dismissKeyboardAndSpotlight();
+                    return;
+                }
+
+                if (!keyboardStateOpen && currentHeight > maxObservedHeight) {
                     maxObservedHeight = currentHeight;
                 }
                 
                 const thresholdClosed = maxObservedHeight - 60; // Max observed height minus a small buffer
-                if (currentHeight >= thresholdClosed) {
+                const thresholdOpen = maxObservedHeight - 120;  // Significantly smaller
+                
+                if (currentHeight <= thresholdOpen) {
+                    keyboardStateOpen = true;
+                } else if (keyboardStateOpen && currentHeight >= thresholdClosed) {
                     // Keyboard was closed (e.g., via swipe-back or system gesture or device back button)
                     dismissKeyboardAndSpotlight();
                 }
@@ -453,7 +464,7 @@
             const thresholdClosed = maxObservedHeight - 60; // Close to full height
             const thresholdOpen = maxObservedHeight - 120;  // Significantly smaller
             
-            if (currentHeight >= thresholdClosed) {
+            if (keyboardStateOpen && currentHeight >= thresholdClosed) {
                 // Keyboard is CLOSED
                 keyboardStateOpen = false;
                 dismissKeyboardAndSpotlight();
@@ -493,6 +504,7 @@
             if (blurTimeout) clearTimeout(blurTimeout);
             
             showSpotlight();
+            keyboardStateOpen = false;
             startKeyboardPolling();
             
             const spacer = document.querySelector('.keyboard-spacer');
