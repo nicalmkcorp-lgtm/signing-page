@@ -84,8 +84,8 @@
         @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         
         /* IMPROVED SCROLLING: Focused inputs sit slightly above the virtual keyboard */
-        input { scroll-margin-bottom: 40px; }
-        .keyboard-spacer { display: none; height: 60vh; pointer-events: none; }
+        input { scroll-margin-top: 140px; scroll-margin-bottom: 140px; }
+        .keyboard-spacer { display: none; height: 50vh; pointer-events: none; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col overflow-x-hidden overflow-y-auto">
@@ -353,50 +353,47 @@
             init();
         }
 
+        let blurTimeout = null;
+
         function handleInputFocus(el) {
+            if (blurTimeout) clearTimeout(blurTimeout);
+            
             const spacer = document.querySelector('.keyboard-spacer');
             if (spacer) {
                 spacer.style.display = 'block';
             }
-            // Align input field exactly slightly above the virtual keyboard with custom bottom margin
+            
+            // Align input field smoothly centered in the remaining visible viewport above the keyboard
             setTimeout(function() {
-                el.scrollIntoView({ behavior: "smooth", block: "end" });
+                el.scrollIntoView({ behavior: "smooth", block: "center" });
             }, 300);
         }
 
         function handleInputBlur() {
-            const spacer = document.querySelector('.keyboard-spacer');
-            if (spacer) {
-                spacer.style.display = 'none';
-            }
-        }
-
-        // Listen for visual viewport height changes to perfectly detect virtual keyboard opening/closing on iOS and Android
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', function() {
-                const spacer = document.querySelector('.keyboard-spacer');
-                const isKeyboardOpen = window.visualViewport.height < (window.innerHeight * 0.85);
-                
-                if (isKeyboardOpen) {
-                    if (spacer) {
-                        spacer.style.display = 'block';
-                    }
-                } else {
-                    // Keyboard is closed
+            // Delay slightly to prevent spacer disappearing when shifting between input fields
+            blurTimeout = setTimeout(function() {
+                const active = document.activeElement;
+                const isInputActive = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
+                if (!isInputActive) {
+                    const spacer = document.querySelector('.keyboard-spacer');
                     if (spacer) {
                         spacer.style.display = 'none';
                     }
-                    // If an input is still active when the keyboard is hidden, blur it for cleanliness
-                    if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
-                        document.activeElement.blur();
-                    }
-                    // Smoothly scroll back to the top of the agreement form
-                    setTimeout(function() {
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }, 50);
+                    // Smoothly scroll back to top of page when keyboard goes away
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
-            });
+            }, 150);
         }
+
+        // Tap outside of inputs to immediately hide keyboard and remove spacer
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                const active = document.activeElement;
+                if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+                    active.blur();
+                }
+            }
+        });
 
         function showError() {
             hideElement('loader');
