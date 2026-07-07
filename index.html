@@ -357,6 +357,7 @@
         let keyboardStateOpen = false;
         let spotlightActive = false;
         let blurTimeout = null;
+        let pollingTimer = null;
 
         function showSpotlight() {
             if (spotlightActive) return;
@@ -391,6 +392,8 @@
         }
 
         function dismissKeyboardAndSpotlight() {
+            stopKeyboardPolling();
+            
             const active = document.activeElement;
             if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
                 active.blur();
@@ -409,11 +412,40 @@
             }, 50);
         }
 
+        function startKeyboardPolling() {
+            if (pollingTimer) clearInterval(pollingTimer);
+            pollingTimer = setInterval(function() {
+                const currentHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+                
+                // Track maxObservedHeight dynamically when keyboard is closed
+                const active = document.activeElement;
+                const isInputActive = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
+                if (!isInputActive && currentHeight > maxObservedHeight) {
+                    maxObservedHeight = currentHeight;
+                }
+                
+                const thresholdClosed = maxObservedHeight - 60; // Max observed height minus a small buffer
+                if (currentHeight >= thresholdClosed) {
+                    // Keyboard was closed (e.g., via swipe-back or system gesture or device back button)
+                    dismissKeyboardAndSpotlight();
+                }
+            }, 120);
+        }
+
+        function stopKeyboardPolling() {
+            if (pollingTimer) {
+                clearInterval(pollingTimer);
+                pollingTimer = null;
+            }
+        }
+
         function checkKeyboardState() {
-            if (!window.visualViewport) return;
+            const currentHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
             
-            const currentHeight = window.visualViewport.height;
-            if (currentHeight > maxObservedHeight) {
+            // Record largest height we've seen when no input is focused to keep maxObservedHeight accurate
+            const active = document.activeElement;
+            const isInputActive = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
+            if (!isInputActive && currentHeight > maxObservedHeight) {
                 maxObservedHeight = currentHeight;
             }
             
@@ -422,19 +454,18 @@
             const thresholdOpen = maxObservedHeight - 120;  // Significantly smaller
             
             if (currentHeight >= thresholdClosed) {
-                // Keyboard is definitely CLOSED
+                // Keyboard is CLOSED
                 keyboardStateOpen = false;
                 dismissKeyboardAndSpotlight();
             } else if (currentHeight <= thresholdOpen) {
-                // Keyboard is definitely OPEN
+                // Keyboard is OPEN
                 keyboardStateOpen = true;
                 showSpotlight();
                 if (spacer) {
                     spacer.style.display = 'block';
                 }
                 
-                const active = document.activeElement;
-                if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+                if (isInputActive) {
                     // Smoothly center the input 110px from top
                     setTimeout(function() {
                         const targetScrollY = active.getBoundingClientRect().top + window.scrollY - 110;
@@ -446,14 +477,23 @@
 
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', checkKeyboardState);
-        } else {
-            window.addEventListener('resize', checkKeyboardState);
         }
+        window.addEventListener('resize', function() {
+            // Update orientation/max height on resizing if no input is focused
+            const active = document.activeElement;
+            const isInputActive = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
+            if (!isInputActive) {
+                maxObservedHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+            } else {
+                checkKeyboardState();
+            }
+        });
 
         function handleInputFocus(el) {
             if (blurTimeout) clearTimeout(blurTimeout);
             
             showSpotlight();
+            startKeyboardPolling();
             
             const spacer = document.querySelector('.keyboard-spacer');
             if (spacer) {
