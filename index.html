@@ -353,7 +353,54 @@
             init();
         }
 
+        let maxObservedHeight = window.innerHeight;
+        let keyboardStateOpen = false;
         let blurTimeout = null;
+
+        function checkKeyboardState() {
+            const currentHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+            maxObservedHeight = Math.max(maxObservedHeight, currentHeight);
+            
+            const spacer = document.querySelector('.keyboard-spacer');
+            const openNow = currentHeight < (maxObservedHeight - 120);
+            
+            if (openNow !== keyboardStateOpen) {
+                keyboardStateOpen = openNow;
+                if (keyboardStateOpen) {
+                    // Keyboard opened
+                    if (spacer) {
+                        spacer.style.display = 'block';
+                    }
+                    const active = document.activeElement;
+                    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+                        // Place input beautifully at 110px from viewport top so it is higher up and perfectly visible
+                        setTimeout(function() {
+                            const targetScrollY = active.getBoundingClientRect().top + window.scrollY - 110;
+                            window.scrollTo({ top: targetScrollY, behavior: "smooth" });
+                        }, 100);
+                    }
+                } else {
+                    // Keyboard closed (including by swipe back, tap outside, or browser default behavior)
+                    if (spacer) {
+                        spacer.style.display = 'none';
+                    }
+                    const active = document.activeElement;
+                    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+                        active.blur();
+                    }
+                    // Smoothly scroll to the very bottom of the document to see the submit/review buttons clearly
+                    setTimeout(function() {
+                        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+                    }, 50);
+                }
+            }
+        }
+
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', checkKeyboardState);
+        } else {
+            window.addEventListener('resize', checkKeyboardState);
+        }
 
         function handleInputFocus(el) {
             if (blurTimeout) clearTimeout(blurTimeout);
@@ -367,7 +414,7 @@
             setTimeout(function() {
                 const targetScrollY = el.getBoundingClientRect().top + window.scrollY - 110;
                 window.scrollTo({ top: targetScrollY, behavior: "smooth" });
-            }, 300);
+            }, 100);
         }
 
         function handleInputBlur() {
@@ -375,7 +422,7 @@
             blurTimeout = setTimeout(function() {
                 const active = document.activeElement;
                 const isInputActive = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
-                if (!isInputActive) {
+                if (!isInputActive && !keyboardStateOpen) {
                     const spacer = document.querySelector('.keyboard-spacer');
                     if (spacer) {
                         spacer.style.display = 'none';
@@ -395,33 +442,6 @@
                 }
             }
         });
-
-        // Listen for visual viewport height changes to perfectly detect virtual keyboard opening/closing on iOS and Android (including back gesture, swipe, physical back button)
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', function() {
-                const spacer = document.querySelector('.keyboard-spacer');
-                const isKeyboardClosed = window.visualViewport.height >= (window.innerHeight - 60);
-                
-                if (isKeyboardClosed) {
-                    if (spacer) {
-                        spacer.style.display = 'none';
-                    }
-                    // If an input is still active when the keyboard is hidden, blur it for cleanliness
-                    const active = document.activeElement;
-                    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
-                        active.blur();
-                    }
-                    // Smoothly scroll back to the bottom of the agreement form
-                    setTimeout(function() {
-                        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
-                    }, 50);
-                } else {
-                    if (spacer) {
-                        spacer.style.display = 'block';
-                    }
-                }
-            });
-        }
 
         function showError() {
             hideElement('loader');
