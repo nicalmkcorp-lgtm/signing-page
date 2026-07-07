@@ -353,45 +353,62 @@
             init();
         }
 
-        let maxObservedHeight = window.innerHeight;
+        let maxObservedHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
         let keyboardStateOpen = false;
         let blurTimeout = null;
 
         function checkKeyboardState() {
-            const currentHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-            maxObservedHeight = Math.max(maxObservedHeight, currentHeight);
+            if (!window.visualViewport) return;
+            
+            const currentHeight = window.visualViewport.height;
+            // Always update maxObservedHeight to the largest height seen (keyboard fully closed)
+            if (currentHeight > maxObservedHeight) {
+                maxObservedHeight = currentHeight;
+            }
             
             const spacer = document.querySelector('.keyboard-spacer');
-            const openNow = currentHeight < (maxObservedHeight - 120);
             
-            if (openNow !== keyboardStateOpen) {
-                keyboardStateOpen = openNow;
+            // Hysteresis thresholds to avoid race conditions during keyboard opening/closing animations
+            const thresholdClosed = maxObservedHeight - 50;  // Height is very close to full screen
+            const thresholdOpen = maxObservedHeight - 150;    // Height is significantly reduced
+            
+            if (currentHeight >= thresholdClosed) {
+                // Keyboard is definitely CLOSED
                 if (keyboardStateOpen) {
-                    // Keyboard opened
-                    if (spacer) {
-                        spacer.style.display = 'block';
-                    }
-                    const active = document.activeElement;
-                    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
-                        // Place input beautifully at 110px from viewport top so it is higher up and perfectly visible
-                        setTimeout(function() {
-                            const targetScrollY = active.getBoundingClientRect().top + window.scrollY - 110;
-                            window.scrollTo({ top: targetScrollY, behavior: "smooth" });
-                        }, 100);
-                    }
-                } else {
-                    // Keyboard closed (including by swipe back, tap outside, or browser default behavior)
+                    keyboardStateOpen = false;
+                    
                     if (spacer) {
                         spacer.style.display = 'none';
                     }
+                    
+                    // Blur any active inputs so cursor goes away and keyboard can be re-opened cleanly
                     const active = document.activeElement;
                     if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
                         active.blur();
                     }
-                    // Smoothly scroll to the very bottom of the document to see the submit/review buttons clearly
+                    
+                    // Smoothly scroll to the very bottom of the document to see the buttons clearly
                     setTimeout(function() {
                         window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
                     }, 50);
+                }
+            } else if (currentHeight <= thresholdOpen) {
+                // Keyboard is definitely OPEN
+                if (!keyboardStateOpen) {
+                    keyboardStateOpen = true;
+                    
+                    if (spacer) {
+                        spacer.style.display = 'block';
+                    }
+                    
+                    const active = document.activeElement;
+                    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+                        // Place input beautifully high up (80px from viewport top) so it's perfectly visible
+                        setTimeout(function() {
+                            const targetScrollY = active.getBoundingClientRect().top + window.scrollY - 80;
+                            window.scrollTo({ top: targetScrollY, behavior: "smooth" });
+                        }, 50);
+                    }
                 }
             }
         }
@@ -410,9 +427,9 @@
                 spacer.style.display = 'block';
             }
             
-            // Calculate precise scroll position to place focused input beautifully clear of the keyboard (about 110px from viewport top)
+            // Calculate precise scroll position to place focused input beautifully clear of the keyboard (about 80px from viewport top)
             setTimeout(function() {
-                const targetScrollY = el.getBoundingClientRect().top + window.scrollY - 110;
+                const targetScrollY = el.getBoundingClientRect().top + window.scrollY - 80;
                 window.scrollTo({ top: targetScrollY, behavior: "smooth" });
             }, 100);
         }
