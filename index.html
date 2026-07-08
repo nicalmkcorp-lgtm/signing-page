@@ -61,6 +61,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" crossorigin="anonymous"
             onerror="this.onerror=null; this.src='https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js'; window.supabase_fallback_active = true;" 
             onload="console.log('Supabase Library Loaded Successfully')"></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -128,12 +129,6 @@
                 <!-- Dynamically populated -->
             </div>
 
-            <div class="p-4 bg-blue-50 border border-blue-100 rounded-2xl">
-                <p class="text-[10px] font-bold text-blue-700 text-center leading-relaxed italic">
-                    "I have reviewed the particulars above and they are correct."
-                </p>
-            </div>
-
             <!-- MANDATORY LEGAL NOTICE BOX -->
             <div class="p-4 bg-amber-50 border border-amber-100 rounded-2xl shadow-sm">
                 <p class="text-[10px] font-black text-amber-800 text-center uppercase leading-relaxed tracking-tight">
@@ -152,7 +147,24 @@
                 </div>
             </div>
 
-            <button onclick="showTerms()" class="w-full py-5 bg-blue-600 text-white font-black rounded-2xl shadow-xl active:scale-95 transition-all text-xs uppercase tracking-widest mt-4">
+            <!-- REVIEW CONFIRMATION CHECKBOX -->
+            <label class="flex items-center gap-3.5 p-4 bg-blue-50 border border-blue-100 rounded-2xl cursor-pointer hover:bg-blue-100/30 transition-all select-none mt-2 active:scale-[0.98]">
+                <input type="checkbox" id="reviewCheck" onchange="updateReviewButton()" class="w-5 h-5 accent-blue-600 border-slate-200 rounded-lg cursor-pointer shrink-0">
+                <span class="text-[11px] font-bold text-blue-800 leading-snug italic">
+                    "I have reviewed the particulars above and they are correct."
+                </span>
+            </label>
+
+            <!-- CLOUDFLARE TURNSTILE ANTI-BOT WIDGET -->
+            <div class="flex justify-center mt-4">
+                <div class="cf-turnstile" 
+                     data-sitekey="0x4AAAAAADxxi3RuuUVtIzeA" 
+                     data-callback="onTurnstileSuccess" 
+                     data-expired-callback="onTurnstileExpired"
+                     data-error-callback="onTurnstileError"></div>
+            </div>
+
+            <button id="reviewBtn" onclick="showTerms()" disabled class="w-full py-5 bg-slate-200 text-slate-400 font-black rounded-2xl shadow-none cursor-not-allowed transition-all text-xs uppercase tracking-widest mt-4">
                 Review Agreement
             </button>
         </div>
@@ -233,6 +245,8 @@
         let scriptUrl = null;
         let draftId = null;
         let supabaseInstance = null;
+        let lastFocusTime = 0;
+        let turnstileVerified = false;
         
         const canvas = document.getElementById('sigPad');
         const ctx = canvas.getContext('2d');
@@ -354,6 +368,7 @@
         }
 
         function handleInputFocus(el) {
+            lastFocusTime = Date.now();
             const spacer = document.querySelector('.keyboard-spacer');
             if (spacer) {
                 spacer.style.display = 'block';
@@ -370,6 +385,37 @@
                 spacer.style.display = 'none';
             }
         }
+
+        // Auto-detect virtual keyboard dismissal via back button, gesture, or swipe-down to automatically blur inputs and remove spacer spacing
+        function setupKeyboardDismissListener() {
+            const handleResize = () => {
+                const activeEl = document.activeElement;
+                if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+                    // Avoid race condition where a resize event fires right when keyboard starts opening (within first 600ms)
+                    if (Date.now() - lastFocusTime < 600) {
+                        return;
+                    }
+                    
+                    const currentHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+                    const totalHeight = window.innerHeight;
+                    const diff = totalHeight - currentHeight;
+                    
+                    // On keyboard slide down/minimize, visual viewport returns to full height (diff < 100px)
+                    if (diff < 100) {
+                        activeEl.blur();
+                    }
+                }
+            };
+
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', handleResize);
+            } else {
+                window.addEventListener('resize', handleResize);
+            }
+        }
+
+        // Initialize keyboard dismiss tracking
+        setupKeyboardDismissListener();
 
         function showError() {
             hideElement('loader');
@@ -487,12 +533,51 @@
             document.getElementById('termsBody').innerText = draftData.terms_content;
         }
 
+        function onTurnstileSuccess(token) {
+            turnstileVerified = true;
+            updateReviewButton();
+        }
+
+        function onTurnstileExpired() {
+            turnstileVerified = false;
+            updateReviewButton();
+        }
+
+        function onTurnstileError() {
+            turnstileVerified = false;
+            updateReviewButton();
+        }
+
+        function updateReviewButton() {
+            const checked = document.getElementById('reviewCheck').checked;
+            const btn = document.getElementById('reviewBtn');
+            if (checked && turnstileVerified) {
+                btn.removeAttribute('disabled');
+                btn.className = "w-full py-5 bg-blue-600 text-white font-black rounded-2xl shadow-xl active:scale-95 hover:bg-blue-700 transition-all text-xs uppercase tracking-widest mt-4 cursor-pointer";
+            } else {
+                btn.setAttribute('disabled', 'true');
+                btn.className = "w-full py-5 bg-slate-200 text-slate-400 font-black rounded-2xl shadow-none cursor-not-allowed transition-all text-xs uppercase tracking-widest mt-4";
+            }
+        }
+
         function showTerms() {
+            const checked = document.getElementById('reviewCheck').checked;
+            if (!checked) {
+                alert("Please check \"I have reviewed the particulars above and they are correct.\" first.");
+                return;
+            }
+            if (!turnstileVerified) {
+                alert("Please complete the Cloudflare anti-bot verification first.");
+                return;
+            }
             const name = document.getElementById('signerName').value.trim();
             const addr = document.getElementById('signerAddress').value.trim();
             if (!name || !addr) {
                 alert("Please fill in your name and address first.");
                 return;
+            }
+            if (document.activeElement) {
+                document.activeElement.blur();
             }
             showElement('termsOverlay', 'flex');
         }
