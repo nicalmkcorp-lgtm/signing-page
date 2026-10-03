@@ -287,10 +287,16 @@
                     if (error) throw error;
 
                     if (data && data.contract_data) {
-                        draftData = data.contract_data;
-                        if (!draftData.id) {
-                            draftData.id = draftId;
-                        }
+                        draftData = {
+                            ...data.contract_data,
+                            company_id: data.company_id || data.company,
+                            company: data.company_id || data.company,
+                            reference_id: data.reference_id || draftId,
+                            contract_type: data.contract_type || data.contract_data.type || 'debt',
+                            type: data.contract_type || data.contract_data.type || 'debt',
+                            id: data.reference_id || draftId,
+                            draft_id: data.id || draftId
+                        };
                         renderUI();
                         clearTimeout(pageTimeout);
                         const loader = document.getElementById('loader');
