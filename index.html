@@ -790,22 +790,39 @@
 
                     if (updateErr) throw updateErr;
 
-                    // Automatically invoke send-contract-notification edge function for all admins & authorized staff
+                    // Insert or upsert into signatures table to automatically trigger database webhook
+                    const targetRefId = draftData.id || draftData.reference_id || draftId;
+                    try {
+                        await supabaseInstance.from('signatures').upsert({
+                            reference_id: targetRefId,
+                            company_id: draftData.company_id || draftData.company || 'default',
+                            contract_type: draftData.type || 'contract',
+                            person_name: signerName,
+                            signature_data: base64,
+                            contract_data: updatedContractData,
+                            signed_at: new Date().toISOString()
+                        }, { onConflict: 'reference_id' });
+                        console.log("Successfully recorded signature in signatures table");
+                    } catch (sigErr) {
+                        console.warn("Could not upsert into signatures table:", sigErr);
+                    }
+
+                    // Also invoke send-contract-notification edge function directly as immediate backup
                     try {
                         await supabaseInstance.functions.invoke('send-contract-notification', {
                             body: {
                                 record: {
                                     company_id: draftData.company_id || draftData.company,
                                     person_name: signerName,
-                                    reference_id: draftId,
+                                    reference_id: targetRefId,
                                     contract_type: draftData.type || 'contract',
-                                    id: draftId
+                                    id: targetRefId
                                 }
                             }
                         });
                         console.log("FCM Contract Signed notification successfully dispatched");
                     } catch (pushErr) {
-                        console.warn("Could not dispatch contract notification push:", pushErr);
+                        console.warn("Could not dispatch contract notification push directly:", pushErr);
                     }
 
                     hideElement('signingOverlay');
