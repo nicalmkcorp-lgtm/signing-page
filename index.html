@@ -108,8 +108,39 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" cy="8" x2="12" y2="12"/><line x1="12" cy="16" x2="12.01" y2="16"/></svg>
         </div>
         <h2 class="text-xl font-black text-slate-900 mb-2">Failed to load contract data.</h2>
-        <p class="text-slate-500 text-sm mb-8">This link may be expired, already signed, or incorrect.</p>
+        <p class="text-slate-500 text-sm mb-8">This link may be expired, not found, or incorrect.</p>
         <button onclick="window.location.reload()" class="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg">Retry Connection</button>
+    </div>
+
+    <!-- Dedicated Already Signed Status Screen -->
+    <div id="alreadySignedScreen" class="hidden fixed inset-0 z-[150] bg-slate-50 flex flex-col items-center justify-center p-6 text-center" style="display: none;">
+        <div class="w-full max-w-sm bg-white rounded-[2rem] p-8 shadow-xl border border-slate-100 flex flex-col items-center space-y-4">
+            <div class="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center shadow-inner">
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+            </div>
+            <div>
+                <h2 class="text-xl font-black text-slate-900 tracking-tight">Agreement Executed</h2>
+                <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest mt-1">Legally Signed & Recorded</p>
+            </div>
+            <div class="w-full bg-slate-50 rounded-2xl p-4 border border-slate-100 text-left space-y-2.5 text-xs">
+                <div class="flex justify-between items-center">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Signer</span>
+                    <span id="signedSignerName" class="font-bold text-slate-800 truncate max-w-[180px]">---</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Reference</span>
+                    <span id="signedRefId" class="font-mono text-[10px] font-bold text-blue-600">---</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Executed On</span>
+                    <span id="signedTimestamp" class="font-semibold text-slate-600 text-[11px]">---</span>
+                </div>
+            </div>
+            <p class="text-[11px] text-slate-400 font-medium leading-relaxed">
+                This document has already been securely signed and submitted to the company ledger.
+            </p>
+            <p class="text-[9px] font-black text-slate-300 uppercase tracking-widest pt-2">You may safely close this window</p>
+        </div>
     </div>
 
     <!-- Main Content Container -->
@@ -267,7 +298,9 @@
             const sbKeyParam = params.get('sb_key');
             draftId = params.get('d') || params.get('draftId');
 
-            // Support Supabase Draft Loading
+            const companyParam = params.get('c') || params.get('company') || params.get('companyId') || '';
+
+            // Support Supabase Draft Loading securely via PostgreSQL RPC (get_public_contract_draft)
             if (sbUrlParam && sbKeyParam && draftId) {
                 try {
                     const sClient = window.supabase;
@@ -277,43 +310,72 @@
                     
                     supabaseInstance = sClient.createClient(sbUrlParam, sbKeyParam);
                     
-                    const { data, error } = await supabaseInstance
-                        .from('contracts')
-                        .select('*')
-                        .eq('id', draftId)
-                        .eq('status', 'draft')
-                        .maybeSingle();
+                    const { data: result, error } = await supabaseInstance.rpc(
+                        'get_public_contract_draft',
+                        {
+                            p_draft_id: draftId,
+                            p_company_id: companyParam || null
+                        }
+                    );
 
                     if (error) throw error;
 
-                    if (data && data.contract_data) {
-                        draftData = {
-                            ...data.contract_data,
-                            company_id: data.company_id || data.company,
-                            company: data.company_id || data.company,
-                            reference_id: data.reference_id || draftId,
-                            contract_type: data.contract_type || data.contract_data.type || 'debt',
-                            type: data.contract_type || data.contract_data.type || 'debt',
-                            id: data.reference_id || draftId,
-                            draft_id: data.id || draftId
-                        };
-                        renderUI();
-                        clearTimeout(pageTimeout);
-                        const loader = document.getElementById('loader');
-                        if (loader) {
-                            loader.classList.add('opacity-0');
-                            setTimeout(() => {
+                    if (result && result.found) {
+                        // Case A: Agreement is already signed
+                        if (result.status === 'signed') {
+                            clearTimeout(pageTimeout);
+                            hideElement('loader');
+                            
+                            const nameEl = document.getElementById('signedSignerName');
+                            if (nameEl) nameEl.innerText = result.person_name || 'Signed';
+                            
+                            const refEl = document.getElementById('signedRefId');
+                            if (refEl) refEl.innerText = result.reference_id || draftId;
+                            
+                            const timeEl = document.getElementById('signedTimestamp');
+                            if (timeEl) {
+                                try {
+                                    timeEl.innerText = new Date(result.signed_at).toLocaleString();
+                                } catch(e) {
+                                    timeEl.innerText = result.signed_at || 'Executed';
+                                }
+                            }
+                            
+                            showElement('alreadySignedScreen', 'flex');
+                            return;
+                        }
+
+                        // Case B: Agreement draft is ready to review and sign
+                        if (result.contract_data) {
+                            draftData = {
+                                ...result.contract_data,
+                                company_id: result.company_id,
+                                company: result.company_id,
+                                reference_id: result.reference_id || draftId,
+                                contract_type: result.contract_type || result.contract_data.type || 'debt',
+                                type: result.contract_type || result.contract_data.type || 'debt',
+                                id: result.reference_id || draftId,
+                                draft_id: result.reference_id || draftId
+                            };
+                            renderUI();
+                            clearTimeout(pageTimeout);
+                            const loader = document.getElementById('loader');
+                            if (loader) {
+                                loader.classList.add('opacity-0');
+                                setTimeout(() => {
+                                    hideElement('loader');
+                                    showElement('main', 'flex');
+                                }, 500);
+                            } else {
                                 hideElement('loader');
                                 showElement('main', 'flex');
-                            }, 500);
-                        } else {
-                            hideElement('loader');
-                            showElement('main', 'flex');
+                            }
+                            return;
                         }
-                    } else {
-                        clearTimeout(pageTimeout);
-                        showOnScreenError("Contract agreement draft not found on database. This can happen if the link is expired, has already been processed, or if Row-Level Security (RLS) is active but SELECT policies are missing on your contracts table.");
                     }
+
+                    clearTimeout(pageTimeout);
+                    showOnScreenError("Contract agreement draft not found or company ID mismatch. This can happen if the link is incorrect or the agreement belongs to another company.");
                 } catch (e) {
                     console.error("Supabase draft load error:", e);
                     clearTimeout(pageTimeout);
@@ -765,49 +827,34 @@
             const signerName = document.getElementById('signerName').value;
             const signerAddress = document.getElementById('signerAddress').value;
 
-            // Support Supabase Submission
+            // Support Supabase Submission securely via PostgreSQL RPC (submit_public_contract_signature)
             if (supabaseInstance) {
                 try {
-                    const updatedContractData = {
-                        ...draftData,
-                        signature: base64,
-                        signature_data: base64, // trigger expects signature_data in contract_data jsonb
-                        signerAddress: signerAddress,
+                    const targetRefId = draftData.id || draftData.reference_id || draftId;
+                    const payload = {
+                        draft_id: targetRefId,
+                        reference_id: targetRefId,
+                        company_id: draftData.company_id || draftData.company || 'default',
+                        contract_type: draftData.type || 'contract',
+                        signer_name: signerName,
+                        person_name: signerName,
                         signer_address: signerAddress,
-                        signatureDate: new Date().toISOString(),
-                        signerName: signerName,
-                        signer_name: signerName
+                        signature: base64,
+                        signature_data: base64
                     };
 
-                    const { error: updateErr } = await supabaseInstance
-                        .from('contracts')
-                        .update({
-                            status: 'signed',
-                            person_name: signerName,
-                            contract_data: updatedContractData
-                        })
-                        .eq('id', draftId);
+                    const { data: submitRes, error: submitErr } = await supabaseInstance.rpc(
+                        'submit_public_contract_signature',
+                        { p_payload: payload }
+                    );
 
-                    if (updateErr) throw updateErr;
-
-                    // Insert or upsert into signatures table to automatically trigger database webhook
-                    const targetRefId = draftData.id || draftData.reference_id || draftId;
-                    try {
-                        await supabaseInstance.from('signatures').upsert({
-                            reference_id: targetRefId,
-                            company_id: draftData.company_id || draftData.company || 'default',
-                            contract_type: draftData.type || 'contract',
-                            person_name: signerName,
-                            signature_data: base64,
-                            contract_data: updatedContractData,
-                            signed_at: new Date().toISOString()
-                        }, { onConflict: 'reference_id' });
-                        console.log("Successfully recorded signature in signatures table");
-                    } catch (sigErr) {
-                        console.warn("Could not upsert into signatures table:", sigErr);
+                    if (submitErr || (submitRes && submitRes.success === false)) {
+                        throw submitErr || new Error(submitRes?.error || "Submission failed");
                     }
 
-                    // Also invoke send-contract-notification edge function directly as immediate backup
+                    console.log("Signature atomically committed to ledger via submit_public_contract_signature RPC:", submitRes);
+
+                    // Also invoke send-contract-notification edge function directly as immediate FCM backup
                     try {
                         await supabaseInstance.functions.invoke('send-contract-notification', {
                             body: {
