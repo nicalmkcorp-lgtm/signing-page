@@ -301,7 +301,13 @@
             const companyParam = params.get('c') || params.get('company') || params.get('companyId') || '';
 
             // Support Supabase Draft Loading securely via PostgreSQL RPC (get_public_contract_draft)
-            if (sbUrlParam && sbKeyParam && draftId) {
+            if (sbUrlParam && sbKeyParam) {
+                if (!draftId || draftId === 'undefined' || draftId === 'null') {
+                    clearTimeout(pageTimeout);
+                    showOnScreenError("Invalid or missing contract draft identifier in the signing link. Please request a fresh signing link.");
+                    return;
+                }
+
                 try {
                     const sClient = window.supabase;
                     if (!sClient || typeof sClient.createClient !== 'function') {
@@ -375,7 +381,11 @@
                     }
 
                     clearTimeout(pageTimeout);
-                    showOnScreenError("Contract agreement draft not found or company ID mismatch. This can happen if the link is incorrect or the agreement belongs to another company.");
+                    console.warn("Contract agreement draft lookup returned:", result);
+                    const errorMsg = (result && result.error)
+                        ? result.error
+                        : "Contract agreement draft not found or company ID mismatch. This can happen if the link is incorrect or the agreement belongs to another company.";
+                    showOnScreenError(errorMsg);
                 } catch (e) {
                     console.error("Supabase draft load error:", e);
                     clearTimeout(pageTimeout);
