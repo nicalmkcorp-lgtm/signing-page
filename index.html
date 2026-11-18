@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://mjserver.lmk-corp-sys.com https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self';">
+
     <!-- Professional Messenger Card Metadata -->
     <meta property="og:title" content="Digital Agreement Signature | Nica.Lmk.Corp">
     <meta property="og:description" content="Securely review and sign your digital agreement. Legally binding electronic signature portal provided by Nica Lmk Corp Infrastructure.">
@@ -12,25 +15,24 @@
     <meta property="og:site_name" content="Nica Lmk Corp">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    
+
     <title>Digital Agreement | Nica.Lmk.Corp</title>
     <script>
-        // Failsafe error reporter that works before or after DOM Content is fully loaded
         function showOnScreenError(text) {
             console.error("Secure Portal Error:", text);
             function apply() {
                 const spinner = document.getElementById('loader-spinner');
                 if (spinner) spinner.style.setProperty('display', 'none', 'important');
-                
+
                 const status = document.getElementById('loader-status');
                 if (status) {
                     status.innerText = "Secure Link Paused";
                     status.className = "text-[10px] font-black text-rose-500 uppercase tracking-widest";
                 }
-                
+
                 const errorText = document.getElementById('loader-error-text');
                 if (errorText) errorText.innerText = text;
-                
+
                 const errorBox = document.getElementById('loader-error');
                 if (errorBox) {
                     errorBox.classList.remove('hidden');
@@ -44,8 +46,7 @@
             }
         }
 
-        // Catch evaluating or runtime syntax/execution issues at earliest load-phase
-        window.onerror = function(message, source, lineno, colno, error) {
+        window.onerror = function(message, source, lineno) {
             if (message === 'Script error.') return true;
             const file = source ? source.split('/').pop() : 'script';
             showOnScreenError("System Error: " + message + " (" + file + ":" + lineno + ")");
@@ -56,35 +57,31 @@
             showOnScreenError("System Error: " + reason);
         };
     </script>
-    <script src="./tailwind.js" onerror="this.onerror=null; this.src='https://cdn.tailwindcss.com'; this.onerror=function(){ showOnScreenError('Failed to load Tailwind CSS engine. Please check your network connection.'); };"></script>
-    <!-- Use UMD bundle instead of modern ESM default; with secondary fallback loader in case jsdelivr is blocked/slow -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" crossorigin="anonymous"
-            onerror="this.onerror=null; this.src='https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js'; window.supabase_fallback_active = true;" 
-            onload="console.log('Supabase Library Loaded Successfully')"></script>
+    <script src="./tailwind.js" onerror="showOnScreenError('Failed to load bundled stylesheet assets.');"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js" crossorigin="anonymous"
+            onerror="this.onerror=null; this.src='https://unpkg.com/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js';"></script>
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         #sigPad { touch-action: none; background: white; cursor: crosshair; }
-        
-        /* Ensure overlay strictly respects dynamic viewport height to avoid being pushed down by Messenger/browser headers */
+
         #signingOverlay { width: 100vw; height: 100vh; height: 100dvh; }
-        
+
         @media screen and (orientation: portrait) {
             #signingOverlay { transform: rotate(90deg); transform-origin: center; width: 100vh !important; width: 100dvh !important; height: 100vw !important; top: 50%; left: 50%; translate: -50% -50%; position: fixed; }
         }
         @media screen and (orientation: landscape) {
             #signingOverlay { transform: none; width: 100vw !important; height: 100vh !important; height: 100dvh !important; top: 0; left: 0; translate: 0 0; position: fixed; }
         }
-        
+
         #clearBtn, #actionBtns { bottom: max(1.5rem, env(safe-area-inset-bottom)); }
         .is-iphone #clearBtn, .is-iphone #actionBtns { bottom: 1.5rem !important; }
-        
+
         .animate-pop { animation: pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
         @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        
-        /* IMPROVED SCROLLING: Focused inputs sit higher with scroll-margin-top */
+
         input { scroll-margin-top: 260px; }
         .keyboard-spacer { display: none; height: 45vh; pointer-events: none; }
     </style>
@@ -102,21 +99,25 @@
         </div>
     </div>
 
-    <!-- Error Screen -->
-    <div id="errorScreen" class="hidden fixed inset-0 z-[150] bg-white flex flex-col items-center justify-center p-8 text-center" style="display: none;">
-        <div class="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mb-6">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" cy="8" x2="12" y2="12"/><line x1="12" cy="16" x2="12.01" y2="16"/></svg>
+    <!-- Error / Expired / Used Link Screen -->
+    <div id="errorScreen" class="hidden fixed inset-0 z-[150] bg-slate-50 flex flex-col items-center justify-center p-6 text-center" style="display: none;">
+        <div class="w-full max-w-sm bg-white rounded-[2rem] p-8 shadow-xl border border-slate-100 flex flex-col items-center space-y-4">
+            <div class="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <h2 id="errorScreenTitle" class="text-xl font-black text-slate-900 tracking-tight">Signing Link Unavailable</h2>
+            <p id="errorScreenMessage" class="text-slate-500 text-xs font-medium leading-relaxed">
+                This link is invalid, has already been used, or expired after 72 hours. Please request a fresh link from your administrator.
+            </p>
+            <p class="text-[9px] font-black text-slate-300 uppercase tracking-widest pt-2">72-Hour Single-Use Security Policy</p>
         </div>
-        <h2 class="text-xl font-black text-slate-900 mb-2">Failed to load contract data.</h2>
-        <p class="text-slate-500 text-sm mb-8">This link may be expired, not found, or incorrect.</p>
-        <button onclick="window.location.reload()" class="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg">Retry Connection</button>
     </div>
 
     <!-- Dedicated Already Signed Status Screen -->
     <div id="alreadySignedScreen" class="hidden fixed inset-0 z-[150] bg-slate-50 flex flex-col items-center justify-center p-6 text-center" style="display: none;">
         <div class="w-full max-w-sm bg-white rounded-[2rem] p-8 shadow-xl border border-slate-100 flex flex-col items-center space-y-4">
             <div class="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center shadow-inner">
-                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
             </div>
             <div>
                 <h2 class="text-xl font-black text-slate-900 tracking-tight">Agreement Executed</h2>
@@ -137,7 +138,7 @@
                 </div>
             </div>
             <p class="text-[11px] text-slate-400 font-medium leading-relaxed">
-                This document has already been securely signed and submitted to the company ledger.
+                This document has been securely signed and submitted to the company ledger.
             </p>
             <p class="text-[9px] font-black text-slate-300 uppercase tracking-widest pt-2">You may safely close this window</p>
         </div>
@@ -157,7 +158,7 @@
             </div>
 
             <div id="particulars" class="bg-slate-50 rounded-2xl p-5 border border-slate-100 space-y-3">
-                <!-- Dynamically populated -->
+                <!-- Dynamically populated safely -->
             </div>
 
             <!-- MANDATORY LEGAL NOTICE BOX -->
@@ -170,13 +171,16 @@
             <div class="space-y-4">
                 <div class="space-y-1.5">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Your Full Name</label>
-                    <input type="text" id="signerName" onfocus="handleInputFocus(this)" onblur="handleInputBlur()" placeholder="Enter Full Legal Name" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
+                    <input type="text" id="signerName" maxlength="150" onfocus="handleInputFocus(this)" onblur="handleInputBlur()" placeholder="Enter Full Legal Name" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
                 </div>
                 <div class="space-y-1.5">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current Address</label>
-                    <input type="text" id="signerAddress" onfocus="handleInputFocus(this)" onblur="handleInputBlur()" placeholder="Enter Complete Address" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
+                    <input type="text" id="signerAddress" maxlength="400" onfocus="handleInputFocus(this)" onblur="handleInputBlur()" placeholder="Enter Complete Address" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
                 </div>
             </div>
+
+            <!-- Form Validation Banner -->
+            <div id="mainFormError" class="hidden p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-[11px] font-bold text-center" style="display: none;"></div>
 
             <!-- REVIEW CONFIRMATION CHECKBOX -->
             <label class="flex items-center gap-3.5 p-4 bg-blue-50 border border-blue-100 rounded-2xl cursor-pointer hover:bg-blue-100/30 transition-all select-none mt-2 active:scale-[0.98]">
@@ -188,9 +192,10 @@
 
             <!-- CLOUDFLARE TURNSTILE ANTI-BOT WIDGET -->
             <div class="flex justify-center mt-4">
-                <div class="cf-turnstile" 
-                     data-sitekey="0x4AAAAAADxxi3RuuUVtIzeA" 
-                     data-callback="onTurnstileSuccess" 
+                <div id="turnstileWidget"
+                     class="cf-turnstile"
+                     data-sitekey="0x4AAAAAADxxi3RuuUVtIzeA"
+                     data-callback="onTurnstileSuccess"
                      data-expired-callback="onTurnstileExpired"
                      data-error-callback="onTurnstileError"></div>
             </div>
@@ -199,8 +204,7 @@
                 Review Agreement
             </button>
         </div>
-        
-        <!-- Bottom Spacer to allow centering inputs when keyboard is active -->
+
         <div class="keyboard-spacer"></div>
     </div>
 
@@ -212,15 +216,13 @@
                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Please read carefully</p>
             </div>
             <button onclick="hideTerms()" class="p-2 bg-slate-100 rounded-full text-slate-400">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
         </div>
-        <div class="flex-1 overflow-y-auto p-8 text-slate-600 text-xs leading-relaxed whitespace-pre-wrap no-scrollbar" id="termsBody">
-            <!-- Populated -->
-        </div>
+        <div class="flex-1 overflow-y-auto p-8 text-slate-600 text-xs leading-relaxed whitespace-pre-wrap no-scrollbar" id="termsBody"></div>
         <div class="p-6 bg-white border-t border-slate-100 shrink-0">
             <button onclick="showSignature()" class="w-full py-5 bg-emerald-600 text-white font-black rounded-2xl shadow-xl active:scale-95 transition-all text-xs uppercase tracking-widest">
-                I Agree & Proceed
+                I Agree &amp; Proceed
             </button>
         </div>
     </div>
@@ -244,15 +246,27 @@
     <!-- Success Screen -->
     <div id="successScreen" class="hidden fixed inset-0 z-[400] bg-white flex flex-col items-center justify-center p-8 text-center animate-pop" style="display: none;">
         <div class="w-24 h-24 bg-emerald-50 rounded-[2.5rem] flex items-center justify-center mb-8 text-emerald-500 shadow-inner">
-            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10.01 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10.01 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         </div>
         <h2 class="text-3xl font-black text-slate-900 mb-2">Success!</h2>
-        <p class="text-slate-500 text-sm font-medium leading-relaxed max-w-xs">Your signed agreement has been encrypted and saved to the corporate ledger.</p>
+        <p class="text-slate-500 text-sm font-medium leading-relaxed max-w-xs">Your signed agreement has been verified, recorded, and locked as a single-use execution.</p>
         <p class="text-slate-300 text-[10px] font-bold uppercase tracking-widest mt-12">You may now close this window</p>
     </div>
 
     <script>
-        // Custom show/hide helpers to bypass Tailwind and CDN classes overrides via bulletproof inline display toggling
+        const TRUSTED_SUPABASE_URL = "https://mjserver.lmk-corp-sys.com";
+        const TRUSTED_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIn0.tmnQgLmN6LaGJzNCb4fUNrneMYs2TGU4Ib4QFpEsNYY";
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return "";
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
         function showElement(id, displayType = 'flex') {
             const el = document.getElementById(id);
             if (el) {
@@ -261,13 +275,26 @@
             }
         }
 
-        // Failsafe hide/show element helpers
         function hideElement(id) {
             const el = document.getElementById(id);
             if (el) {
                 el.classList.add('hidden');
                 el.style.setProperty('display', 'none', 'important');
             }
+        }
+
+        function showMainFormError(msg) {
+            const el = document.getElementById('mainFormError');
+            if (!el) return;
+            el.textContent = msg;
+            el.classList.remove('hidden');
+            el.style.setProperty('display', 'block', 'important');
+            setTimeout(() => {
+                if (el) {
+                    el.classList.add('hidden');
+                    el.style.setProperty('display', 'none', 'important');
+                }
+            }, 6000);
         }
 
         function showSigningError(msg) {
@@ -284,24 +311,32 @@
                 }, 8000);
             }
             console.error("Signature submission failure:", msg);
-            try {
-                if (typeof alert === 'function') {
-                    alert(msg);
-                }
-            } catch(e) {}
+        }
+
+        function showExpiredOrInvalid(title, msg) {
+            hideElement('loader');
+            hideElement('main');
+            hideElement('termsOverlay');
+            hideElement('signingOverlay');
+            const titleEl = document.getElementById('errorScreenTitle');
+            const msgEl = document.getElementById('errorScreenMessage');
+            if (titleEl && title) titleEl.textContent = title;
+            if (msgEl && msg) msgEl.textContent = msg;
+            showElement('errorScreen', 'flex');
         }
 
         const isIPhone = /iPhone|iPad|iPod/i.test(navigator.userAgent);
         if (isIPhone) document.body.classList.add('is-iphone');
 
         let draftData = null;
-        let scriptUrl = null;
         let draftId = null;
         let companyParam = '';
+        let signingToken = '';
         let supabaseInstance = null;
         let lastFocusTime = 0;
         let turnstileVerified = false;
-        
+        let turnstileToken = '';
+
         const canvas = document.getElementById('sigPad');
         const ctx = canvas.getContext('2d');
         let isDrawing = false;
@@ -309,159 +344,98 @@
         let lastY = 0;
         let hasSigned = false;
 
+        function parseSigningParameters() {
+            const rawHash = window.location.hash ? window.location.hash.replace(/^#/, '') : '';
+            const hashParams = new URLSearchParams(rawHash);
+            const queryParams = new URLSearchParams(window.location.search);
+
+            return {
+                draftId: (hashParams.get('d') || hashParams.get('draftId') || queryParams.get('d') || queryParams.get('draftId') || '').trim(),
+                companyId: (hashParams.get('c') || hashParams.get('company') || hashParams.get('companyId') || queryParams.get('c') || queryParams.get('company') || queryParams.get('companyId') || '').trim(),
+                signingToken: (hashParams.get('t') || hashParams.get('token') || queryParams.get('t') || queryParams.get('token') || '').trim(),
+            };
+        }
+
         async function init() {
-            // Guard with a failsafe timeout of 12 seconds to prevent infinite spinning
             const pageTimeout = setTimeout(() => {
-                showOnScreenError("Connection timeout. The cloud connection is taking too long to respond. Please check your internet connection and reload, or verify that your database credentials are correct.");
+                showOnScreenError("Connection timeout. The secure portal is taking too long to respond. Please check your internet connection and reload.");
             }, 12000);
 
-            const params = new URLSearchParams(window.location.search);
-            
-            const sbUrlParam = params.get('sb_url');
-            const sbKeyParam = params.get('sb_key');
-            draftId = params.get('d') || params.get('draftId');
+            const parsed = parseSigningParameters();
+            draftId = parsed.draftId;
+            companyParam = parsed.companyId;
+            signingToken = parsed.signingToken;
 
-            companyParam = params.get('c') || params.get('company') || params.get('companyId') || '';
-
-            // Support Supabase Draft Loading securely via PostgreSQL RPC (get_public_contract_draft)
-            if (sbUrlParam && sbKeyParam) {
-                if (!draftId || draftId === 'undefined' || draftId === 'null') {
-                    clearTimeout(pageTimeout);
-                    showOnScreenError("Invalid or missing contract draft identifier in the signing link. Please request a fresh signing link.");
-                    return;
-                }
-
-                try {
-                    const sClient = window.supabase;
-                    if (!sClient || typeof sClient.createClient !== 'function') {
-                        throw new Error("Supabase Client SDK has failed to load completely. If you are blocking trackers, scripts, or using CDNs restrictions we recommend configuring fallback parameters.");
-                    }
-                    
-                    supabaseInstance = sClient.createClient(sbUrlParam, sbKeyParam);
-                    
-                    const { data: result, error } = await supabaseInstance.rpc(
-                        'get_public_contract_draft',
-                        {
-                            p_draft_id: draftId,
-                            p_company_id: companyParam || null
-                        }
-                    );
-
-                    if (error) throw error;
-
-                    if (result && result.found) {
-                        // Case A: Agreement is already signed
-                        if (result.status === 'signed') {
-                            clearTimeout(pageTimeout);
-                            hideElement('loader');
-                            
-                            const nameEl = document.getElementById('signedSignerName');
-                            if (nameEl) nameEl.innerText = result.person_name || 'Signed';
-                            
-                            const refEl = document.getElementById('signedRefId');
-                            if (refEl) refEl.innerText = result.reference_id || draftId;
-                            
-                            const timeEl = document.getElementById('signedTimestamp');
-                            if (timeEl) {
-                                try {
-                                    timeEl.innerText = new Date(result.signed_at).toLocaleString();
-                                } catch(e) {
-                                    timeEl.innerText = result.signed_at || 'Executed';
-                                }
-                            }
-                            
-                            showElement('alreadySignedScreen', 'flex');
-                            return;
-                        }
-
-                        // Case B: Agreement draft is ready to review and sign
-                        if (result.contract_data) {
-                            draftData = {
-                                ...result.contract_data,
-                                company_id: result.company_id,
-                                company: result.company_id,
-                                reference_id: result.reference_id || draftId,
-                                contract_type: result.contract_type || result.contract_data.type || 'debt',
-                                type: result.contract_type || result.contract_data.type || 'debt',
-                                id: result.reference_id || draftId,
-                                draft_id: result.reference_id || draftId
-                            };
-                            renderUI();
-                            clearTimeout(pageTimeout);
-                            const loader = document.getElementById('loader');
-                            if (loader) {
-                                loader.classList.add('opacity-0');
-                                setTimeout(() => {
-                                    hideElement('loader');
-                                    showElement('main', 'flex');
-                                }, 500);
-                            } else {
-                                hideElement('loader');
-                                showElement('main', 'flex');
-                            }
-                            return;
-                        }
-                    }
-
-                    clearTimeout(pageTimeout);
-                    console.warn("Contract agreement draft lookup returned:", result);
-                    const errorMsg = (result && result.error)
-                        ? result.error
-                        : "Contract agreement draft not found or company ID mismatch. This can happen if the link is incorrect or the agreement belongs to another company.";
-                    showOnScreenError(errorMsg);
-                } catch (e) {
-                    console.error("Supabase draft load error:", e);
-                    clearTimeout(pageTimeout);
-                    showOnScreenError("Database Client Connection Error: " + (e.message || e));
-                }
-                return;
-            }
-
-            // Fallback: Google Apps Script Draft Loading
-            const scriptId = params.get('s');
-            scriptUrl = params.get('url');
-
-            if (scriptId) {
-                scriptUrl = `https://script.google.com/macros/s/${scriptId}/exec`;
-            }
-
-            if (!scriptUrl || !draftId) {
+            if (!draftId || draftId === 'undefined' || draftId === 'null' || !companyParam) {
                 clearTimeout(pageTimeout);
-                showError();
+                showExpiredOrInvalid(
+                    "Invalid or Incomplete Link",
+                    "This signing link is missing required verification details, has expired after 72 hours, or has already been used. Please request a fresh link."
+                );
                 return;
             }
 
             try {
-                const response = await fetch(`${scriptUrl}?mode=getDraft&draftId=${draftId}`);
-                const result = await response.json();
-                
-                if (result.status === 'success' && result.data) {
-                    draftData = result.data;
+                const sClient = window.supabase;
+                if (!sClient || typeof sClient.createClient !== 'function') {
+                    throw new Error("Supabase Client SDK failed to load. Please disable script blockers and reload.");
+                }
+
+                supabaseInstance = sClient.createClient(TRUSTED_SUPABASE_URL, TRUSTED_SUPABASE_ANON_KEY);
+
+                const { data: result, error } = await supabaseInstance.rpc(
+                    'get_public_contract_draft',
+                    {
+                        p_draft_id: draftId,
+                        p_company_id: companyParam,
+                        p_signing_token: signingToken || null,
+                    }
+                );
+
+                clearTimeout(pageTimeout);
+
+                if (error) {
+                    showOnScreenError("Database Connection Error: " + (error.message || "Unable to verify link."));
+                    return;
+                }
+
+                if (result && result.found && result.contract_data) {
+                    draftData = {
+                        ...result.contract_data,
+                        company_id: result.company_id || companyParam,
+                        company: result.company_id || companyParam,
+                        reference_id: result.reference_id || draftId,
+                        contract_type: result.contract_type || result.contract_data.type || 'debt',
+                        type: result.contract_type || result.contract_data.type || 'debt',
+                        id: result.reference_id || draftId,
+                        draft_id: result.reference_id || draftId,
+                    };
                     renderUI();
-                    clearTimeout(pageTimeout);
                     const loader = document.getElementById('loader');
                     if (loader) {
                         loader.classList.add('opacity-0');
                         setTimeout(() => {
                             hideElement('loader');
                             showElement('main', 'flex');
-                        }, 500);
+                        }, 300);
                     } else {
                         hideElement('loader');
                         showElement('main', 'flex');
                     }
-                } else {
-                    clearTimeout(pageTimeout);
-                    showError();
+                    return;
                 }
+
+                showExpiredOrInvalid(
+                    "Link Expired or Already Used",
+                    (result && result.error) || "This signing link is invalid, expired after 72 hours, or has already been used."
+                );
             } catch (e) {
-                console.error(e);
+                console.error("Supabase draft load error:", e);
                 clearTimeout(pageTimeout);
-                showOnScreenError("Google Script error: " + (e.message || e));
+                showOnScreenError("Secure Portal Error: " + (e.message || e));
             }
         }
 
-        // Run immediately when script is parsed, or wait for document list
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', init);
         } else {
@@ -471,57 +445,34 @@
         function handleInputFocus(el) {
             lastFocusTime = Date.now();
             const spacer = document.querySelector('.keyboard-spacer');
-            if (spacer) {
-                spacer.style.display = 'block';
-            }
-            // Scroll HIGHER by using block: "start"
-            setTimeout(function() {
+            if (spacer) spacer.style.display = 'block';
+            setTimeout(() => {
                 el.scrollIntoView({ behavior: "smooth", block: "start" });
             }, 450);
         }
 
         function handleInputBlur() {
             const spacer = document.querySelector('.keyboard-spacer');
-            if (spacer) {
-                spacer.style.display = 'none';
-            }
+            if (spacer) spacer.style.display = 'none';
         }
 
-        // Auto-detect virtual keyboard dismissal via back button, gesture, or swipe-down to automatically blur inputs and remove spacer spacing
         function setupKeyboardDismissListener() {
             const handleResize = () => {
                 const activeEl = document.activeElement;
                 if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
-                    // Avoid race condition where a resize event fires right when keyboard starts opening (within first 600ms)
-                    if (Date.now() - lastFocusTime < 600) {
-                        return;
-                    }
-                    
+                    if (Date.now() - lastFocusTime < 600) return;
                     const currentHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-                    const totalHeight = window.innerHeight;
-                    const diff = totalHeight - currentHeight;
-                    
-                    // On keyboard slide down/minimize, visual viewport returns to full height (diff < 100px)
-                    if (diff < 100) {
-                        activeEl.blur();
-                    }
+                    const diff = window.innerHeight - currentHeight;
+                    if (diff < 100) activeEl.blur();
                 }
             };
-
             if (window.visualViewport) {
                 window.visualViewport.addEventListener('resize', handleResize);
             } else {
                 window.addEventListener('resize', handleResize);
             }
         }
-
-        // Initialize keyboard dismiss tracking
         setupKeyboardDismissListener();
-
-        function showError() {
-            hideElement('loader');
-            showElement('errorScreen', 'flex');
-        }
 
         function getOrdinal(n) {
             const s = ["th", "st", "nd", "rd"];
@@ -529,11 +480,20 @@
             return s[(v - 20) % 10] || s[v] || s[0];
         }
 
+        function renderRow(labelText, valueText, valueClass = "text-xs font-bold text-slate-700") {
+            return `
+                <div class="flex justify-between gap-3">
+                    <span class="text-[9px] font-black text-slate-400 uppercase shrink-0">${escapeHtml(labelText)}</span>
+                    <span class="${escapeHtml(valueClass)} text-right">${escapeHtml(valueText)}</span>
+                </div>
+            `;
+        }
+
         function renderUI() {
             const container = document.getElementById('particulars');
             const type = draftData.type || 'debt';
             const label = document.getElementById('docTypeLabel');
-            
+
             let mainLabel = "Total Amount";
             if (type === 'rent') {
                 label.innerText = 'Rental Booking';
@@ -548,11 +508,11 @@
                 label.innerText = 'Loan Agreement';
                 mainLabel = "Loan Amount";
             }
-            
+
             let html = `
                 <div class="flex justify-between items-center pb-2 border-b border-slate-100">
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">${mainLabel}</span>
-                    <span class="text-lg font-black text-slate-900">₱${Number(draftData.amount).toLocaleString()}</span>
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">${escapeHtml(mainLabel)}</span>
+                    <span class="text-lg font-black text-slate-900">₱${escapeHtml(Number(draftData.amount || 0).toLocaleString())}</span>
                 </div>
             `;
 
@@ -562,116 +522,57 @@
                 let diffDays = Math.ceil(Math.abs(eDate - sDate) / (1000 * 60 * 60 * 24)) + 1;
                 if (isNaN(diffDays)) diffDays = 1;
 
-                html += `
-                    <div class="flex justify-between">
-                        <span class="text-[9px] font-black text-slate-400 uppercase">Car Model</span>
-                        <span class="text-xs font-bold text-slate-700 uppercase">${draftData.car_model || '---'}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-[9px] font-black text-slate-400 uppercase">Plate Number</span>
-                        <span class="text-xs font-bold text-slate-700 uppercase">${draftData.plate_number || '---'}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-[9px] font-black text-slate-400 uppercase">Rental Dates</span>
-                        <span class="text-xs font-bold text-slate-700">${draftData.date} to ${draftData.end_date}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-[9px] font-black text-slate-400 uppercase">Rental Duration</span>
-                        <span class="text-xs font-bold text-slate-700">${diffDays} Day${diffDays > 1 ? 's' : ''}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-[9px] font-black text-slate-400 uppercase">Distance Limit</span>
-                        <span class="text-xs font-bold text-slate-700 uppercase">${draftData.distance_limit || (diffDays * 300)} km Total</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-[9px] font-black text-slate-400 uppercase">Driver Option</span>
-                        <span class="text-xs font-bold text-slate-700 uppercase">${draftData.driver_option === 'with_driver' ? 'With Driver' : 'Self Drive'}</span>
-                    </div>
-                `;
+                html += renderRow("Car Model", draftData.car_model || '---', "text-xs font-bold text-slate-700 uppercase");
+                html += renderRow("Plate Number", draftData.plate_number || '---', "text-xs font-bold text-slate-700 uppercase");
+                html += renderRow("Rental Dates", `${draftData.date || '---'} to ${draftData.end_date || '---'}`);
+                html += renderRow("Rental Duration", `${diffDays} Day${diffDays > 1 ? 's' : ''}`);
+                html += renderRow("Distance Limit", `${draftData.distance_limit || (diffDays * 300)} km Total`, "text-xs font-bold text-slate-700 uppercase");
+                html += renderRow("Driver Option", draftData.driver_option === 'with_driver' ? 'With Driver' : 'Self Drive', "text-xs font-bold text-slate-700 uppercase");
             } else if (type === 'investor') {
                 const investDate = new Date(draftData.date);
-                const day = investDate.getDate();
+                const day = isNaN(investDate.getDate()) ? 1 : investDate.getDate();
                 const ordinal = getOrdinal(day);
 
-                html += `
-                    <div class="flex justify-between">
-                        <span class="text-[9px] font-black text-slate-400 uppercase">Return Rate</span>
-                        <span class="text-xs font-bold text-slate-700 uppercase">${draftData.rate}% Monthly</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-[9px] font-black text-slate-400 uppercase">Monthly Payout Amount</span>
-                        <span class="text-xs font-bold text-slate-700 uppercase">₱${Number(draftData.payout_amount || 0).toLocaleString()}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-[9px] font-black text-slate-400 uppercase">Date Invested</span>
-                        <span class="text-xs font-bold text-slate-700">${draftData.date}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-[9px] font-black text-slate-400 uppercase">Payout Day</span>
-                        <span class="text-xs font-bold text-slate-700">Every ${day}${ordinal} of month</span>
-                    </div>
-                `;
+                html += renderRow("Return Rate", `${draftData.rate || 0}% Monthly`, "text-xs font-bold text-slate-700 uppercase");
+                html += renderRow("Monthly Payout Amount", `₱${Number(draftData.payout_amount || 0).toLocaleString()}`, "text-xs font-bold text-slate-700 uppercase");
+                html += renderRow("Date Invested", draftData.date || '---');
+                html += renderRow("Payout Day", `Every ${day}${ordinal} of month`);
             } else if (type === 'investor_liquidation') {
-                html += `
-                    <div class="flex justify-between">
-                        <span class="text-[9px] font-black text-slate-400 uppercase">Fund Holder</span>
-                        <span class="text-xs font-bold text-slate-700 uppercase">${draftData.fund_holder || '---'}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-[9px] font-black text-slate-400 uppercase">Original Date Invested</span>
-                        <span class="text-xs font-bold text-slate-700">${draftData.date_invested || draftData.date || '---'}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-[9px] font-black text-slate-400 uppercase">Date of Full Redemption</span>
-                        <span class="text-xs font-bold text-emerald-700">${draftData.redemption_date || draftData.date || '---'}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-[9px] font-black text-slate-400 uppercase">Settlement Account</span>
-                        <span class="text-xs font-bold text-slate-700 uppercase">${draftData.bank_name ? (draftData.bank_name + (draftData.bank_number ? ' • ' + draftData.bank_number : '')) : '---'}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-[9px] font-black text-slate-400 uppercase">Prior Agreement Status</span>
-                        <span class="text-xs font-black text-rose-600 uppercase">NULLIFIED & SUPERSEDED</span>
-                    </div>
-                `;
+                const bankStr = draftData.bank_name
+                    ? `${draftData.bank_name}${draftData.bank_number ? ' • ' + draftData.bank_number : ''}`
+                    : '---';
+                html += renderRow("Fund Holder", draftData.fund_holder || '---', "text-xs font-bold text-slate-700 uppercase");
+                html += renderRow("Original Date Invested", draftData.date_invested || draftData.date || '---');
+                html += renderRow("Date of Full Redemption", draftData.redemption_date || draftData.date || '---', "text-xs font-bold text-emerald-700");
+                html += renderRow("Settlement Account", bankStr, "text-xs font-bold text-slate-700 uppercase");
+                html += renderRow("Prior Agreement Status", "NULLIFIED & SUPERSEDED", "text-xs font-black text-rose-600 uppercase");
             } else {
-                html += `
-                    <div class="flex justify-between">
-                        <span class="text-[9px] font-black text-slate-400 uppercase">Term Type</span>
-                        <span class="text-xs font-bold text-slate-700 uppercase">${draftData.term || '---'}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-[9px] font-black text-slate-400 uppercase">Period</span>
-                        <span class="text-xs font-bold text-slate-700 uppercase">${draftData.period || '---'}</span>
-                    </div>
-                `;
-                
+                html += renderRow("Term Type", draftData.term || '---', "text-xs font-bold text-slate-700 uppercase");
+                html += renderRow("Period", draftData.period || '---', "text-xs font-bold text-slate-700 uppercase");
                 if (draftData.amount_per_due && draftData.term !== 'One payment') {
-                    html += `
-                        <div class="flex justify-between">
-                            <span class="text-[9px] font-black text-slate-400 uppercase">Amount Per Period</span>
-                            <span class="text-xs font-bold text-slate-700 uppercase">₱${Number(draftData.amount_per_due).toLocaleString()}</span>
-                        </div>
-                    `;
+                    html += renderRow("Amount Per Period", `₱${Number(draftData.amount_per_due).toLocaleString()}`, "text-xs font-bold text-slate-700 uppercase");
                 }
             }
 
             container.innerHTML = html;
-            document.getElementById('termsBody').innerText = draftData.terms_content;
+            document.getElementById('termsBody').innerText = draftData.terms_content || '';
         }
 
         function onTurnstileSuccess(token) {
             turnstileVerified = true;
+            turnstileToken = token || '';
             updateReviewButton();
         }
 
         function onTurnstileExpired() {
             turnstileVerified = false;
+            turnstileToken = '';
             updateReviewButton();
         }
 
         function onTurnstileError() {
             turnstileVerified = false;
+            turnstileToken = '';
             updateReviewButton();
         }
 
@@ -690,17 +591,22 @@
         function showTerms() {
             const checked = document.getElementById('reviewCheck').checked;
             if (!checked) {
-                alert("Please check \"I have reviewed the particulars above and they are correct.\" first.");
+                showMainFormError('Please check "I have reviewed the particulars above and they are correct." first.');
                 return;
             }
-            if (!turnstileVerified) {
-                alert("Please complete the Cloudflare anti-bot verification first.");
+            const liveToken = (typeof window.turnstile !== 'undefined' && typeof window.turnstile.getResponse === 'function')
+                ? (window.turnstile.getResponse() || turnstileToken)
+                : turnstileToken;
+            if (!turnstileVerified || !liveToken) {
+                showMainFormError("Please complete the Cloudflare security challenge first.");
                 return;
             }
+            turnstileToken = liveToken;
+
             const name = document.getElementById('signerName').value.trim();
             const addr = document.getElementById('signerAddress').value.trim();
             if (!name || !addr) {
-                alert("Please fill in your name and address first.");
+                showMainFormError("Please enter both your full legal name and current address.");
                 return;
             }
             if (document.activeElement) {
@@ -729,9 +635,8 @@
             const ratio = window.devicePixelRatio || 1;
             const newWidth = canvas.offsetWidth * ratio;
             const newHeight = canvas.offsetHeight * ratio;
-            
             if (canvas.width === newWidth && canvas.height === newHeight) return;
-            
+
             let tempCanvas = null;
             if (hasSigned) {
                 tempCanvas = document.createElement('canvas');
@@ -739,7 +644,7 @@
                 tempCanvas.height = canvas.height;
                 tempCanvas.getContext('2d').drawImage(canvas, 0, 0);
             }
-            
+
             canvas.width = newWidth;
             canvas.height = newHeight;
             ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -748,7 +653,7 @@
             ctx.lineWidth = 3;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
-            
+
             if (tempCanvas && hasSigned) {
                 ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width / ratio, tempCanvas.height / ratio);
             }
@@ -758,11 +663,11 @@
         function initDrawing() {
             if (isDrawingInitialized) return;
             isDrawingInitialized = true;
-            
+
             window.addEventListener('resize', () => {
                 setTimeout(resizeCanvas, 150);
             });
-            
+
             const start = (e) => {
                 isDrawing = true;
                 hasSigned = true;
@@ -781,7 +686,7 @@
                 lastY = pos.y;
                 e.preventDefault();
             };
-            const end = () => isDrawing = false;
+            const end = () => { isDrawing = false; };
 
             canvas.addEventListener('mousedown', start);
             canvas.addEventListener('mousemove', move);
@@ -794,15 +699,9 @@
         function getPos(e) {
             const rect = canvas.getBoundingClientRect();
             if (window.innerHeight > window.innerWidth) {
-                return {
-                    x: e.clientY - rect.top,
-                    y: rect.right - e.clientX
-                };
+                return { x: e.clientY - rect.top, y: rect.right - e.clientX };
             }
-            return {
-                x: e.clientX - rect.left,
-                y: e.clientY - rect.top
-            };
+            return { x: e.clientX - rect.left, y: e.clientY - rect.top };
         }
 
         function clearPad() {
@@ -835,7 +734,6 @@
 
             if (!found) return sourceCanvas;
 
-            // Add some padding (scaled by devicePixelRatio if needed, but 20px is usually fine)
             const padding = 20;
             left = Math.max(0, left - padding);
             top = Math.max(0, top - padding);
@@ -848,21 +746,26 @@
             const trimmedCanvas = document.createElement('canvas');
             trimmedCanvas.width = trimWidth;
             trimmedCanvas.height = trimHeight;
-            const trimmedContext = trimmedCanvas.getContext('2d');
-
-            trimmedContext.drawImage(sourceCanvas, left, top, trimWidth, trimHeight, 0, 0, trimWidth, trimHeight);
+            trimmedCanvas.getContext('2d').drawImage(sourceCanvas, left, top, trimWidth, trimHeight, 0, 0, trimWidth, trimHeight);
 
             return trimmedCanvas;
         }
 
         async function finalize() {
             if (!hasSigned) {
-                alert("please sign first before finalizing");
+                showSigningError("Please draw your signature first before submitting.");
                 return;
             }
 
-            // For Android, keep the trim logic as it was working perfectly. 
-            // For iPhone, use the simpler logic from the provided code.
+            const activeToken = (typeof window.turnstile !== 'undefined' && typeof window.turnstile.getResponse === 'function')
+                ? (window.turnstile.getResponse() || turnstileToken)
+                : turnstileToken;
+            if (!activeToken) {
+                hideElement('signingOverlay');
+                showMainFormError("Your security verification expired. Please complete Turnstile again before signing.");
+                return;
+            }
+
             let sourceCanvas = canvas;
             if (!isIPhone) {
                 sourceCanvas = trimCanvas(canvas);
@@ -871,131 +774,90 @@
             const tempCanvas = document.createElement('canvas');
             const maxDim = 300;
             const scale = Math.min(maxDim / sourceCanvas.width, maxDim / sourceCanvas.height, 1);
-            tempCanvas.width = sourceCanvas.width * scale;
-            tempCanvas.height = sourceCanvas.height * scale;
+            tempCanvas.width = Math.max(1, sourceCanvas.width * scale);
+            tempCanvas.height = Math.max(1, sourceCanvas.height * scale);
             const tCtx = tempCanvas.getContext('2d');
             tCtx.fillStyle = "#FFFFFF";
-            tCtx.fillRect(0,0,tempCanvas.width,tempCanvas.height);
+            tCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
             tCtx.drawImage(sourceCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
             const base64 = tempCanvas.toDataURL('image/jpeg', 0.5);
-            
+
             const btn = document.getElementById('submitBtn');
             btn.disabled = true;
             btn.innerText = "Submitting...";
 
-            const signerName = document.getElementById('signerName').value;
-            const signerAddress = document.getElementById('signerAddress').value;
+            const signerName = document.getElementById('signerName').value.trim();
+            const signerAddress = document.getElementById('signerAddress').value.trim();
 
-            // Support Supabase Submission securely via PostgreSQL RPC (submit_public_contract_signature)
-            if (supabaseInstance) {
-                try {
-                    const targetRefId = draftData.id || draftData.reference_id || draftId;
-                    const resolvedCompanyId = draftData.company_id || draftData.company || companyParam || 'default';
-                    const payload = {
-                        draft_id: targetRefId,
-                        reference_id: targetRefId,
-                        company_id: resolvedCompanyId,
-                        contract_type: draftData.type || draftData.contract_type || 'contract',
-                        signer_name: signerName,
-                        person_name: signerName,
-                        signer_address: signerAddress,
-                        signature: base64,
-                        signature_data: base64
-                    };
-
-                    const { data: submitRes, error: submitErr } = await supabaseInstance.rpc(
-                        'submit_public_contract_signature',
-                        { p_payload: payload }
-                    );
-
-                    if (submitErr) {
-                        throw new Error(submitErr.message || submitErr.details || "Submission failed");
-                    }
-
-                    if (submitRes && submitRes.success === false) {
-                        if (submitRes.already_signed) {
-                            hideElement('signingOverlay');
-                            hideElement('main');
-                            const nameEl = document.getElementById('signedSignerName');
-                            if (nameEl) nameEl.innerText = draftData.person_name || signerName || 'Executed';
-                            const refEl = document.getElementById('signedRefId');
-                            if (refEl) refEl.innerText = targetRefId;
-                            const timeEl = document.getElementById('signedTimestamp');
-                            if (timeEl) {
-                                try {
-                                    timeEl.innerText = new Date(submitRes.signed_at).toLocaleString();
-                                } catch(e) {
-                                    timeEl.innerText = submitRes.signed_at || 'Executed';
-                                }
-                            }
-                            showElement('alreadySignedScreen', 'flex');
-                            return;
-                        }
-                        throw new Error(submitRes.error || "Submission failed");
-                    }
-
-                    console.log("Signature atomically committed to ledger via submit_public_contract_signature RPC:", submitRes);
-
-                    // Also invoke send-contract-notification edge function directly as immediate FCM backup
-                    try {
-                        await supabaseInstance.functions.invoke('send-contract-notification', {
-                            body: {
-                                record: {
-                                    company_id: resolvedCompanyId,
-                                    person_name: signerName,
-                                    reference_id: targetRefId,
-                                    contract_type: draftData.type || draftData.contract_type || 'contract',
-                                    id: targetRefId
-                                }
-                            }
-                        });
-                        console.log("FCM Contract Signed notification successfully dispatched");
-                    } catch (pushErr) {
-                        console.warn("Could not dispatch contract notification push directly:", pushErr);
-                    }
-
-                    hideElement('signingOverlay');
-                    hideElement('main');
-                    showElement('successScreen', 'flex');
-                } catch (e) {
-                    console.error("Supabase submit signature error:", e);
-                    showSigningError("An error occurred during submission. Try again: " + (e.message || e));
-                    btn.disabled = false;
-                    btn.innerText = "Submit Final";
-                }
-                return;
-            }
-
-            // Fallback: Google Apps Script Submission
             try {
-                const payload = {
-                    action: "processSignature",
-                    draftId: draftId,
-                    id: draftData.id,
-                    signer_name: signerName,
-                    signer_address: signerAddress,
-                    signature: base64,
-                    type: draftData.type,
-                    amount: draftData.amount,
-                    term: draftData.type === 'rent' ? (draftData.driver_option || 'self') : (draftData.term || ''),
-                    period: draftData.period || '',
-                    amount_per_due: draftData.amount_per_due || ''
-                };
+                if (!supabaseInstance) {
+                    throw new Error("Secure connection not initialized.");
+                }
 
-                await fetch(scriptUrl, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify(payload)
-                });
+                const targetRefId = draftData.id || draftData.reference_id || draftId;
+                const resolvedCompanyId = draftData.company_id || draftData.company || companyParam;
+
+                const { data: submitRes, error: submitErr } = await supabaseInstance.functions.invoke(
+                    'submit-contract-signature',
+                    {
+                        body: {
+                            draftId: targetRefId,
+                            companyId: resolvedCompanyId,
+                            signingToken: signingToken,
+                            signerName: signerName,
+                            signerAddress: signerAddress,
+                            signature: base64,
+                            turnstileToken: activeToken,
+                        }
+                    }
+                );
+
+                if (submitErr) {
+                    let parsedMsg = submitErr.message || "Submission failed";
+                    try {
+                        if (submitErr.context && typeof submitErr.context.json === 'function') {
+                            const errJson = await submitErr.context.json();
+                            if (errJson?.error) parsedMsg = errJson.error;
+                        }
+                    } catch (_) {}
+                    throw new Error(parsedMsg);
+                }
+
+                if (!submitRes || submitRes.success === false) {
+                    if (submitRes?.already_signed) {
+                        hideElement('signingOverlay');
+                        hideElement('main');
+                        const nameEl = document.getElementById('signedSignerName');
+                        if (nameEl) nameEl.innerText = signerName || 'Executed';
+                        const refEl = document.getElementById('signedRefId');
+                        if (refEl) refEl.innerText = targetRefId;
+                        const timeEl = document.getElementById('signedTimestamp');
+                        if (timeEl) timeEl.innerText = 'Executed';
+                        showElement('alreadySignedScreen', 'flex');
+                        return;
+                    }
+                    if (submitRes?.expired_or_invalid) {
+                        showExpiredOrInvalid("Link Expired or Invalid", submitRes.error || "This signing link is no longer valid.");
+                        return;
+                    }
+                    throw new Error(submitRes?.error || "Signature submission failed.");
+                }
 
                 hideElement('signingOverlay');
                 hideElement('main');
                 showElement('successScreen', 'flex');
             } catch (e) {
-                alert("An error occurred during submission. Try again.");
+                console.error("Supabase submit signature error:", e);
+                showSigningError("Submission could not be completed: " + (e.message || e));
                 btn.disabled = false;
                 btn.innerText = "Submit Final";
+                if (typeof window.turnstile !== 'undefined' && typeof window.turnstile.reset === 'function') {
+                    try {
+                        window.turnstile.reset();
+                        turnstileVerified = false;
+                        turnstileToken = '';
+                    } catch (_) {}
+                }
             }
         }
     </script>
