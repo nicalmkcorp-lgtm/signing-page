@@ -541,6 +541,9 @@
             } else if (type === 'investor') {
                 label.innerText = 'Investment Terms';
                 mainLabel = "Principal Amount";
+            } else if (type === 'investor_liquidation') {
+                label.innerText = 'Investment Redemption & Release';
+                mainLabel = "Total Redeemed Principal";
             } else {
                 label.innerText = 'Loan Agreement';
                 mainLabel = "Loan Amount";
@@ -606,6 +609,29 @@
                     <div class="flex justify-between">
                         <span class="text-[9px] font-black text-slate-400 uppercase">Payout Day</span>
                         <span class="text-xs font-bold text-slate-700">Every ${day}${ordinal} of month</span>
+                    </div>
+                `;
+            } else if (type === 'investor_liquidation') {
+                html += `
+                    <div class="flex justify-between">
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Fund Holder</span>
+                        <span class="text-xs font-bold text-slate-700 uppercase">${draftData.fund_holder || '---'}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Original Date Invested</span>
+                        <span class="text-xs font-bold text-slate-700">${draftData.date_invested || draftData.date || '---'}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Date of Full Redemption</span>
+                        <span class="text-xs font-bold text-emerald-700">${draftData.redemption_date || draftData.date || '---'}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Settlement Account</span>
+                        <span class="text-xs font-bold text-slate-700 uppercase">${draftData.bank_name ? (draftData.bank_name + (draftData.bank_number ? ' • ' + draftData.bank_number : '')) : '---'}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Prior Agreement Status</span>
+                        <span class="text-xs font-black text-rose-600 uppercase">NULLIFIED & SUPERSEDED</span>
                     </div>
                 `;
             } else {
