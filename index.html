@@ -94,29 +94,10 @@
             font-variant-numeric: tabular-nums;
         }
 
-        /* Submit button light shimmer & animated loading circle */
-        #submitBtn .submit-shimmer {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            opacity: 0;
-            background: linear-gradient(
-                110deg,
-                transparent 20%,
-                rgba(255, 255, 255, 0.24) 44%,
-                rgba(147, 197, 253, 0.36) 50%,
-                rgba(255, 255, 255, 0.24) 56%,
-                transparent 80%
-            );
-            transform: translateX(-120%);
-        }
+        /* Submit button loading circle (shimmer removed) */
         #submitBtn.is-submitting {
             cursor: wait;
             opacity: 0.94;
-        }
-        #submitBtn.is-submitting .submit-shimmer {
-            opacity: 1;
-            animation: submitLightShimmer 1.35s ease-in-out infinite;
         }
         #submitBtn .submit-spinner {
             display: none;
@@ -133,13 +114,39 @@
             display: inline-block;
             animation: spinCircle 0.75s linear infinite;
         }
-        @keyframes submitLightShimmer {
-            0% { transform: translateX(-120%); }
-            100% { transform: translateX(120%); }
-        }
         @keyframes spinCircle {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+
+        /* Sync-style blocking frosted overlay & top Submitting toast */
+        @keyframes progressSlide {
+            0% { transform: translateX(-150%); }
+            100% { transform: translateX(350%); }
+        }
+        .animate-progress-slide {
+            animation: progressSlide 1.5s infinite ease-in-out;
+        }
+        @keyframes toastSimpleFadeIn {
+            0% { opacity: 0; transform: translate(-50%, -10px); }
+            100% { opacity: 1; transform: translate(-50%, 0); }
+        }
+        .animate-toast-in {
+            animation: toastSimpleFadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        @keyframes toastBeating {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+        .animate-beating {
+            animation: toastBeating 1.5s ease-in-out infinite;
+        }
+        @keyframes toastShimmerFlow {
+            0% { transform: translateX(-200%) skewX(-20deg); }
+            100% { transform: translateX(300%) skewX(-20deg); }
+        }
+        .animate-shimmer-flow {
+            animation: toastShimmerFlow 2.5s infinite ease-in-out;
         }
 
         /* Animated Circle-to-Checkmark Icon (matching toast icon) */
@@ -158,6 +165,15 @@
             stroke-dasharray: 20;
             stroke-dashoffset: 20;
         }
+        .icon-success-check.is-syncing .check-circle {
+            stroke-dashoffset: 0;
+            animation: circleDraw 1.60s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+        }
+        .icon-success-check.is-syncing .check-mark {
+            opacity: 0;
+            stroke-dashoffset: 20;
+            animation: none;
+        }
         .icon-success-check.is-success .check-circle {
             animation: circleDraw 1.60s cubic-bezier(0.65, 0, 0.35, 1) 1 forwards;
         }
@@ -174,6 +190,7 @@
             70%, 100% { stroke-dashoffset: 0; }
         }
         @media (prefers-reduced-motion: reduce) {
+            .icon-success-check.is-syncing .check-circle,
             .icon-success-check.is-success .check-circle,
             .icon-success-check.is-success .check-mark {
                 animation: none;
@@ -342,10 +359,38 @@
             <div id="actionBtns" class="absolute right-6 flex gap-2 z-50">
                 <button onclick="hideSignature()" class="py-3 px-6 bg-slate-100 text-slate-400 font-bold rounded-xl text-[10px] uppercase tracking-widest shadow-lg">Back</button>
                 <button id="submitBtn" onclick="finalize()" class="relative overflow-hidden inline-flex items-center justify-center gap-2 py-3 px-8 bg-slate-900 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-lg transition-all cursor-pointer">
-                    <span class="submit-shimmer" aria-hidden="true"></span>
                     <span class="submit-spinner" aria-hidden="true"></span>
                     <span id="submitBtnLabel" class="relative z-10">Submit Final</span>
                 </button>
+            </div>
+        </div>
+        <!-- Blocking Transparent Frosted Glass & Top Submitting Toast (inherits #signingOverlay orientation) -->
+        <div id="signingSubmitOverlay"
+             class="hidden absolute inset-0 z-[80] select-none touch-none pointer-events-auto cursor-wait transition-opacity duration-300"
+             style="display: none; touch-action: none; overscroll-behavior: none; user-select: none; -webkit-user-select: none;"
+             aria-live="polite"
+             aria-busy="true">
+            <div class="absolute inset-0 bg-slate-900/10 backdrop-blur-[2px] touch-none select-none"
+                 style="touch-action: none; overscroll-behavior: none; -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);"></div>
+            <div class="absolute top-0 left-0 w-full h-1 overflow-hidden pointer-events-none">
+                <div class="h-full w-1/3 animate-progress-slide"
+                     style="background: linear-gradient(90deg, transparent, #2563eb, transparent); filter: blur(1px);"></div>
+            </div>
+            <div class="absolute top-8 left-1/2 -translate-x-1/2 z-10 pointer-events-none animate-toast-in">
+                <div class="relative overflow-hidden backdrop-blur-2xl px-6 py-4 rounded-[2rem] flex items-center gap-2 shadow-[0_10px_40px_rgba(0,0,0,0.3)] font-bold text-sm animate-beating"
+                     style="background-color: rgba(37, 99, 235, 0.9); color: #ffffff; border: none; -webkit-backdrop-filter: blur(40px); backdrop-filter: blur(40px);">
+                    <div class="absolute inset-0 pointer-events-none overflow-hidden z-0">
+                        <div class="absolute top-0 -left-full w-1/2 h-full animate-shimmer-flow"
+                             style="background: linear-gradient(90deg, transparent, rgba(34,211,238,0.4), rgba(168,85,247,0.45), rgba(236,72,153,0.4), rgba(255,255,255,0.85), transparent); transform: skewX(-20deg);"></div>
+                    </div>
+                    <div class="relative flex items-center gap-2 z-10">
+                        <svg class="icon-success-check is-syncing text-white" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle class="check-circle" cx="12" cy="12" r="9.5" />
+                            <path class="check-mark" d="M8 12.5l2.8 2.8L16.5 9.5" />
+                        </svg>
+                        <span class="whitespace-nowrap">Submitting...</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -439,6 +484,9 @@
 
         function setSubmitLoading(loading) {
             isSubmitting = loading;
+            if (loading) {
+                isDrawing = false;
+            }
             const btn = document.getElementById('submitBtn');
             const label = document.getElementById('submitBtnLabel');
             if (btn) {
@@ -448,7 +496,25 @@
             if (label) {
                 label.textContent = loading ? "Submitting..." : "Submit Final";
             }
+            if (loading) {
+                showElement('signingSubmitOverlay', 'block');
+            } else {
+                hideElement('signingSubmitOverlay');
+            }
         }
+
+        (function setupSubmitOverlayBlocker() {
+            const overlay = document.getElementById('signingSubmitOverlay');
+            if (!overlay) return;
+            const blockEvent = (e) => {
+                e.stopPropagation();
+                if (e.cancelable) e.preventDefault();
+                return false;
+            };
+            ['touchstart', 'touchmove', 'touchend', 'touchcancel', 'pointerdown', 'pointermove', 'pointerup', 'wheel', 'click'].forEach((evt) => {
+                overlay.addEventListener(evt, blockEvent, { passive: false });
+            });
+        })();
 
         const isIPhone = /iPhone|iPad|iPod/i.test(navigator.userAgent);
         if (isIPhone) document.body.classList.add('is-iphone');
@@ -877,6 +943,7 @@
             });
 
             const start = (e) => {
+                if (isSubmitting || !e) return;
                 isDrawing = true;
                 hasSigned = true;
                 const pos = getPos(e);
@@ -884,7 +951,7 @@
                 lastY = pos.y;
             };
             const move = (e) => {
-                if (!isDrawing) return;
+                if (isSubmitting || !isDrawing || !e) return;
                 const pos = getPos(e);
                 ctx.beginPath();
                 ctx.moveTo(lastX, lastY);
@@ -892,15 +959,27 @@
                 ctx.stroke();
                 lastX = pos.x;
                 lastY = pos.y;
-                e.preventDefault();
+                if (e.cancelable) e.preventDefault();
             };
             const end = () => { isDrawing = false; };
 
             canvas.addEventListener('mousedown', start);
             canvas.addEventListener('mousemove', move);
             window.addEventListener('mouseup', end);
-            canvas.addEventListener('touchstart', (e) => start(e.touches[0]));
-            canvas.addEventListener('touchmove', (e) => move(e.touches[0]));
+            canvas.addEventListener('touchstart', (e) => {
+                if (isSubmitting) {
+                    if (e.cancelable) e.preventDefault();
+                    return;
+                }
+                start(e.touches[0]);
+            }, { passive: false });
+            canvas.addEventListener('touchmove', (e) => {
+                if (isSubmitting) {
+                    if (e.cancelable) e.preventDefault();
+                    return;
+                }
+                move(e.touches[0]);
+            }, { passive: false });
             canvas.addEventListener('touchend', end);
         }
 
