@@ -159,6 +159,46 @@
         .submitting-footer {
             padding-bottom: max(2.5rem, env(safe-area-inset-bottom));
         }
+
+        /* Animated Circle-to-Checkmark Icon (matching toast icon) */
+        .icon-success-check {
+            display: inline-block;
+            vertical-align: middle;
+            flex-shrink: 0;
+        }
+        .icon-success-check .check-circle {
+            stroke-dasharray: 62;
+            stroke-dashoffset: 62;
+            transform-box: fill-box;
+            transform-origin: center;
+        }
+        .icon-success-check .check-mark {
+            stroke-dasharray: 20;
+            stroke-dashoffset: 20;
+        }
+        .icon-success-check.is-success .check-circle {
+            animation: circleDraw 1.60s cubic-bezier(0.65, 0, 0.35, 1) 1 forwards;
+        }
+        .icon-success-check.is-success .check-mark {
+            opacity: 1;
+            animation: checkDraw 1.60s cubic-bezier(0.65, 0, 0.35, 1) 1 forwards;
+        }
+        @keyframes circleDraw {
+            0% { stroke-dashoffset: 62; transform: rotate(-90deg); }
+            45%, 100% { stroke-dashoffset: 0; transform: rotate(0deg); }
+        }
+        @keyframes checkDraw {
+            0%, 30% { stroke-dashoffset: 20; }
+            70%, 100% { stroke-dashoffset: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .icon-success-check.is-success .check-circle,
+            .icon-success-check.is-success .check-mark {
+                animation: none;
+                stroke-dashoffset: 0;
+                transform: none;
+            }
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col overflow-x-hidden overflow-y-auto">
@@ -346,7 +386,10 @@
     <!-- Success Screen -->
     <div id="successScreen" class="hidden fixed inset-0 z-[400] bg-white flex flex-col items-center justify-center p-8 text-center animate-pop" style="display: none;">
         <div class="w-24 h-24 bg-emerald-50 rounded-[2.5rem] flex items-center justify-center mb-8 text-emerald-500 shadow-inner">
-            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10.01 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <svg id="successAnimatedIcon" class="icon-success-check is-success text-emerald-500" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle class="check-circle" cx="12" cy="12" r="9.5" />
+                <path class="check-mark" d="M8 12.5l2.8 2.8L16.5 9.5" />
+            </svg>
         </div>
         <h2 class="text-3xl font-black text-slate-900 mb-2">Success!</h2>
         <p class="text-slate-500 text-sm font-medium leading-relaxed max-w-xs">Your signed agreement has been verified, recorded, and locked as a single-use execution.</p>
@@ -1070,6 +1113,12 @@
                 hideElement('signingOverlay');
                 hideElement('main');
                 showElement('successScreen', 'flex');
+                const successIcon = document.getElementById('successAnimatedIcon');
+                if (successIcon) {
+                    successIcon.classList.remove('is-success');
+                    void successIcon.getBoundingClientRect();
+                    successIcon.classList.add('is-success');
+                }
             } catch (e) {
                 console.error("Supabase submit signature error:", e);
                 isSubmitting = false;
