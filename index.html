@@ -94,111 +94,52 @@
             font-variant-numeric: tabular-nums;
         }
 
-        /* Unrotated submission overlay: matches app SyncOverlay blocking frost + Gemini top aurora */
-        #submittingOverlay {
-            background: rgba(15, 23, 42, 0.10);
-            backdrop-filter: blur(2px);
-            -webkit-backdrop-filter: blur(2px);
-        }
-        .aurora-stage {
+        /* Submit button light shimmer & animated loading circle */
+        #submitBtn .submit-shimmer {
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 46vh;
-            height: 46dvh;
-            overflow: hidden;
+            inset: 0;
             pointer-events: none;
-            -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.72) 40%, rgba(0, 0, 0, 0.25) 75%, transparent 100%);
-            mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.72) 40%, rgba(0, 0, 0, 0.25) 75%, transparent 100%);
+            opacity: 0;
+            background: linear-gradient(
+                110deg,
+                transparent 20%,
+                rgba(255, 255, 255, 0.24) 44%,
+                rgba(147, 197, 253, 0.36) 50%,
+                rgba(255, 255, 255, 0.24) 56%,
+                transparent 80%
+            );
+            transform: translateX(-120%);
         }
-        .gemini-edge-beam {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #4285f4, #22d3ee, #8b5cf6, #ec4899, #38bdf8, #4285f4);
-            background-size: 240% 100%;
-            animation: geminiBeamFlow 2.6s linear infinite;
-            z-index: 3;
+        #submitBtn.is-submitting {
+            cursor: wait;
+            opacity: 0.94;
         }
-        .gemini-edge-bloom {
-            position: absolute;
-            top: -10px;
-            left: -5%;
-            right: -5%;
-            height: 36px;
-            background: linear-gradient(90deg, #4285f4, #22d3ee, #8b5cf6, #ec4899, #38bdf8, #4285f4);
-            background-size: 240% 100%;
-            filter: blur(18px);
-            opacity: 0.85;
-            animation: geminiBeamFlow 2.6s linear infinite;
-            z-index: 2;
+        #submitBtn.is-submitting .submit-shimmer {
+            opacity: 1;
+            animation: submitLightShimmer 1.35s ease-in-out infinite;
         }
-        .aurora-ribbon {
-            position: absolute;
+        #submitBtn .submit-spinner {
+            display: none;
+            width: 13px;
+            height: 13px;
+            border: 2px solid rgba(255, 255, 255, 0.30);
+            border-top-color: #ffffff;
             border-radius: 9999px;
-            filter: blur(42px);
-            will-change: transform, opacity;
+            position: relative;
+            z-index: 10;
+            flex-shrink: 0;
         }
-        .aurora-ribbon-1 {
-            top: -28%;
-            left: -18%;
-            width: 78%;
-            height: 82%;
-            background: radial-gradient(ellipse at center, rgba(66, 133, 244, 0.65) 0%, rgba(34, 211, 238, 0.38) 48%, transparent 74%);
-            animation: geminiWaveA 4.8s ease-in-out infinite alternate;
+        #submitBtn.is-submitting .submit-spinner {
+            display: inline-block;
+            animation: spinCircle 0.75s linear infinite;
         }
-        .aurora-ribbon-2 {
-            top: -30%;
-            right: -18%;
-            width: 78%;
-            height: 82%;
-            background: radial-gradient(ellipse at center, rgba(139, 92, 246, 0.62) 0%, rgba(59, 130, 246, 0.36) 48%, transparent 74%);
-            animation: geminiWaveB 5.4s ease-in-out infinite alternate;
+        @keyframes submitLightShimmer {
+            0% { transform: translateX(-120%); }
+            100% { transform: translateX(120%); }
         }
-        .aurora-ribbon-3 {
-            top: -22%;
-            left: 14%;
-            width: 72%;
-            height: 70%;
-            background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.56) 0%, rgba(236, 72, 153, 0.38) 52%, transparent 76%);
-            animation: geminiWaveC 4.2s ease-in-out infinite alternate;
-        }
-        .aurora-ribbon-4 {
-            top: -18%;
-            left: 25%;
-            width: 50%;
-            height: 55%;
-            background: radial-gradient(ellipse at center, rgba(167, 139, 250, 0.55) 0%, rgba(96, 165, 250, 0.34) 55%, transparent 78%);
-            animation: geminiWaveCore 3.2s ease-in-out infinite alternate;
-        }
-        @keyframes geminiBeamFlow {
-            0% { background-position: 0% 50%; }
-            100% { background-position: 240% 50%; }
-        }
-        @keyframes geminiWaveA {
-            0% { transform: translate3d(-12%, -4%, 0) scaleX(0.96) scaleY(1) rotate(-3deg); opacity: 0.72; }
-            50% { transform: translate3d(16%, 8%, 0) scaleX(1.18) scaleY(1.08) rotate(2deg); opacity: 0.96; }
-            100% { transform: translate3d(28%, -2%, 0) scaleX(1.02) scaleY(0.94) rotate(-1deg); opacity: 0.8; }
-        }
-        @keyframes geminiWaveB {
-            0% { transform: translate3d(12%, 2%, 0) scaleX(1.05) scaleY(0.96) rotate(3deg); opacity: 0.76; }
-            50% { transform: translate3d(-18%, 7%, 0) scaleX(1.2) scaleY(1.1) rotate(-2deg); opacity: 0.96; }
-            100% { transform: translate3d(-26%, -4%, 0) scaleX(0.95) scaleY(1.02) rotate(2deg); opacity: 0.82; }
-        }
-        @keyframes geminiWaveC {
-            0% { transform: translate3d(-18%, 2%, 0) scale(0.92); opacity: 0.65; }
-            50% { transform: translate3d(10%, 10%, 0) scale(1.16); opacity: 0.94; }
-            100% { transform: translate3d(22%, -4%, 0) scale(1.04); opacity: 0.78; }
-        }
-        @keyframes geminiWaveCore {
-            0% { transform: translate3d(-8%, 0%, 0) scaleX(0.9) scaleY(0.92); opacity: 0.6; }
-            100% { transform: translate3d(8%, 8%, 0) scaleX(1.22) scaleY(1.12); opacity: 0.95; }
-        }
-        .submitting-footer {
-            padding-bottom: max(2rem, env(safe-area-inset-bottom));
+        @keyframes spinCircle {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         /* Animated Circle-to-Checkmark Icon (matching toast icon) */
@@ -400,31 +341,11 @@
             <button id="clearBtn" onclick="clearPad()" class="absolute left-6 py-3 px-6 bg-slate-100 text-slate-500 font-black rounded-xl text-[10px] uppercase tracking-widest border border-slate-200 shadow-lg z-50">Clear</button>
             <div id="actionBtns" class="absolute right-6 flex gap-2 z-50">
                 <button onclick="hideSignature()" class="py-3 px-6 bg-slate-100 text-slate-400 font-bold rounded-xl text-[10px] uppercase tracking-widest shadow-lg">Back</button>
-                <button id="submitBtn" onclick="finalize()" class="py-3 px-8 bg-slate-900 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-lg">Submit Final</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Unrotated Submitting Overlay (SyncOverlay Frosted Glass + Gemini Top Aurora + Bottom Status Text) -->
-    <div id="submittingOverlay" class="hidden fixed inset-0 z-[350] flex flex-col justify-end items-center p-6 text-center select-none" style="display: none;" aria-live="polite" role="status">
-        <div class="aurora-stage" aria-hidden="true">
-            <div class="gemini-edge-beam"></div>
-            <div class="gemini-edge-bloom"></div>
-            <div class="aurora-ribbon aurora-ribbon-1"></div>
-            <div class="aurora-ribbon aurora-ribbon-2"></div>
-            <div class="aurora-ribbon aurora-ribbon-3"></div>
-            <div class="aurora-ribbon aurora-ribbon-4"></div>
-        </div>
-        <div class="relative z-10 w-full max-w-sm submitting-footer">
-            <div class="bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-xl rounded-2xl px-5 py-3.5 space-y-1.5">
-                <div class="inline-flex items-center justify-center gap-2">
-                    <span class="relative flex h-2.5 w-2.5">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-600"></span>
-                    </span>
-                    <p class="text-sm font-black text-slate-900 uppercase tracking-[0.16em]">Submitting signed contract</p>
-                </div>
-                <p class="text-xs font-semibold text-slate-600 tracking-wide">Please don't close the browser</p>
+                <button id="submitBtn" onclick="finalize()" class="relative overflow-hidden inline-flex items-center justify-center gap-2 py-3 px-8 bg-slate-900 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-lg transition-all cursor-pointer">
+                    <span class="submit-shimmer" aria-hidden="true"></span>
+                    <span class="submit-spinner" aria-hidden="true"></span>
+                    <span id="submitBtnLabel" class="relative z-10">Submit Final</span>
+                </button>
             </div>
         </div>
     </div>
@@ -504,8 +425,7 @@
 
         function showExpiredOrInvalid(title, msg) {
             stopValidityTimer();
-            isSubmitting = false;
-            hideElement('submittingOverlay');
+            setSubmitLoading(false);
             hideElement('loader');
             hideElement('main');
             hideElement('termsOverlay');
@@ -515,6 +435,19 @@
             if (titleEl && title) titleEl.textContent = title;
             if (msgEl && msg) msgEl.textContent = msg;
             showElement('errorScreen', 'flex');
+        }
+
+        function setSubmitLoading(loading) {
+            isSubmitting = loading;
+            const btn = document.getElementById('submitBtn');
+            const label = document.getElementById('submitBtnLabel');
+            if (btn) {
+                btn.disabled = loading;
+                btn.classList.toggle('is-submitting', loading);
+            }
+            if (label) {
+                label.textContent = loading ? "Submitting..." : "Submit Final";
+            }
         }
 
         const isIPhone = /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -901,6 +834,7 @@
         }
 
         function hideSignature() {
+            if (isSubmitting) return;
             hideElement('signingOverlay');
             showElement('termsOverlay', 'flex');
         }
@@ -979,6 +913,7 @@
         }
 
         function clearPad() {
+            if (isSubmitting) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             hasSigned = false;
         }
@@ -1065,11 +1000,8 @@
             tCtx.drawImage(sourceCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
             const base64 = tempCanvas.toDataURL('image/jpeg', 0.5);
 
-            const btn = document.getElementById('submitBtn');
-            btn.disabled = true;
-            btn.innerText = "Submitting...";
-            isSubmitting = true;
-            showElement('submittingOverlay', 'flex');
+            if (isSubmitting) return;
+            setSubmitLoading(true);
 
             const signerName = document.getElementById('signerName').value.trim();
             const signerAddress = document.getElementById('signerAddress').value.trim();
@@ -1114,9 +1046,8 @@
 
                 if (!resolvedResult || resolvedResult.success === false) {
                     if (resolvedResult?.already_signed) {
-                        isSubmitting = false;
+                        setSubmitLoading(false);
                         stopValidityTimer();
-                        hideElement('submittingOverlay');
                         hideElement('signingOverlay');
                         hideElement('main');
                         const nameEl = document.getElementById('signedSignerName');
@@ -1133,10 +1064,7 @@
                         return;
                     }
                     if (resolvedResult?.turnstile_failed) {
-                        isSubmitting = false;
-                        btn.disabled = false;
-                        btn.innerText = "Submit Final";
-                        hideElement('submittingOverlay');
+                        setSubmitLoading(false);
                         hideElement('signingOverlay');
                         hideElement('termsOverlay');
                         if (typeof window.turnstile !== 'undefined' && typeof window.turnstile.reset === 'function') {
@@ -1153,9 +1081,8 @@
                     throw new Error(resolvedResult?.error || "Signature submission failed.");
                 }
 
-                isSubmitting = false;
+                setSubmitLoading(false);
                 stopValidityTimer();
-                hideElement('submittingOverlay');
                 hideElement('signingOverlay');
                 hideElement('main');
                 showElement('successScreen', 'flex');
@@ -1167,11 +1094,8 @@
                 }
             } catch (e) {
                 console.error("Supabase submit signature error:", e);
-                isSubmitting = false;
-                hideElement('submittingOverlay');
                 showSigningError("Submission could not be completed: " + (e.message || e));
-                btn.disabled = false;
-                btn.innerText = "Submit Final";
+                setSubmitLoading(false);
             }
         }
     </script>
