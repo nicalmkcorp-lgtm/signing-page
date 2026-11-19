@@ -84,6 +84,80 @@
 
         input { scroll-margin-top: 260px; }
         .keyboard-spacer { display: none; height: 45vh; pointer-events: none; }
+
+        /* Top-right non-intrusive link validity indicator */
+        #linkValidityBadge {
+            position: fixed;
+            top: max(0.75rem, env(safe-area-inset-top));
+            right: max(0.75rem, env(safe-area-inset-right));
+            z-index: 40;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Unrotated submission overlay with top aurora + bottom status text */
+        #submittingOverlay {
+            background: #030712;
+        }
+        .aurora-stage {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 55vh;
+            height: 55dvh;
+            overflow: hidden;
+            pointer-events: none;
+            -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 18%, rgba(0, 0, 0, 0.45) 58%, transparent 100%);
+            mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 18%, rgba(0, 0, 0, 0.45) 58%, transparent 100%);
+        }
+        .aurora-ribbon {
+            position: absolute;
+            border-radius: 9999px;
+            filter: blur(56px);
+            will-change: transform, opacity;
+            mix-blend-mode: screen;
+        }
+        .aurora-ribbon-1 {
+            top: -18%;
+            left: -20%;
+            width: 85%;
+            height: 75%;
+            background: radial-gradient(ellipse at center, rgba(16, 185, 129, 0.72) 0%, rgba(6, 182, 212, 0.35) 50%, transparent 75%);
+            animation: auroraDriftA 8s ease-in-out infinite alternate;
+        }
+        .aurora-ribbon-2 {
+            top: -22%;
+            right: -18%;
+            width: 80%;
+            height: 75%;
+            background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.7) 0%, rgba(99, 102, 241, 0.42) 52%, transparent 76%);
+            animation: auroraDriftB 10s ease-in-out infinite alternate;
+        }
+        .aurora-ribbon-3 {
+            top: -10%;
+            left: 15%;
+            width: 70%;
+            height: 60%;
+            background: radial-gradient(ellipse at center, rgba(168, 85, 247, 0.55) 0%, rgba(20, 184, 166, 0.35) 55%, transparent 78%);
+            animation: auroraDriftC 7s ease-in-out infinite alternate;
+        }
+        @keyframes auroraDriftA {
+            0% { transform: translate3d(-6%, -4%, 0) scale(1) rotate(-4deg); opacity: 0.78; }
+            50% { transform: translate3d(8%, 6%, 0) scale(1.12) rotate(3deg); opacity: 0.95; }
+            100% { transform: translate3d(14%, -2%, 0) scale(0.96) rotate(-2deg); opacity: 0.82; }
+        }
+        @keyframes auroraDriftB {
+            0% { transform: translate3d(6%, 2%, 0) scale(1.06) rotate(4deg); opacity: 0.75; }
+            50% { transform: translate3d(-10%, -5%, 0) scale(0.95) rotate(-3deg); opacity: 0.95; }
+            100% { transform: translate3d(-14%, 6%, 0) scale(1.1) rotate(2deg); opacity: 0.8; }
+        }
+        @keyframes auroraDriftC {
+            0% { transform: translate3d(-8%, 4%, 0) scale(0.95); opacity: 0.6; }
+            100% { transform: translate3d(10%, -6%, 0) scale(1.14); opacity: 0.9; }
+        }
+        .submitting-footer {
+            padding-bottom: max(2.5rem, env(safe-area-inset-bottom));
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col overflow-x-hidden overflow-y-auto">
@@ -145,7 +219,13 @@
     </div>
 
     <!-- Main Content Container -->
-    <div id="main" class="hidden flex-1 flex flex-col items-center py-8 px-4 max-w-lg mx-auto w-full" style="display: none;">
+    <div id="main" class="hidden flex-1 flex flex-col items-center pt-12 pb-8 px-4 max-w-lg mx-auto w-full" style="display: none;">
+        <!-- Subtle Top-Right Link Validity Indicator -->
+        <div id="linkValidityBadge" class="hidden inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/85 backdrop-blur-sm border border-slate-200/80 shadow-sm text-[10px] font-semibold text-slate-500 transition-colors" style="display: none;">
+            <span id="linkValidityDot" class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+            <span id="linkValidityText">Link Validity: ---</span>
+        </div>
+
         <div class="text-center mb-8">
             <h1 class="text-2xl font-black text-slate-900 tracking-tighter">Nica.<span class="text-blue-600">Lmk</span>.Corp</h1>
             <p class="text-[8px] font-black text-slate-400 uppercase tracking-[0.4em] mt-1">Digital Infrastructure</p>
@@ -243,6 +323,22 @@
         </div>
     </div>
 
+    <!-- Unrotated Submitting Overlay (Top Aurora + Bottom Status Text) -->
+    <div id="submittingOverlay" class="hidden fixed inset-0 z-[350] flex flex-col justify-end items-center p-6 text-center select-none" style="display: none;" aria-live="polite" role="status">
+        <div class="aurora-stage" aria-hidden="true">
+            <div class="aurora-ribbon aurora-ribbon-1"></div>
+            <div class="aurora-ribbon aurora-ribbon-2"></div>
+            <div class="aurora-ribbon aurora-ribbon-3"></div>
+        </div>
+        <div class="relative z-10 w-full max-w-sm submitting-footer space-y-2">
+            <div class="inline-flex items-center justify-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <p class="text-sm font-black text-white uppercase tracking-[0.18em]">Submitting signed contract</p>
+            </div>
+            <p class="text-xs font-medium text-slate-300 tracking-wide">Please don't close the browser</p>
+        </div>
+    </div>
+
     <!-- Success Screen -->
     <div id="successScreen" class="hidden fixed inset-0 z-[400] bg-white flex flex-col items-center justify-center p-8 text-center animate-pop" style="display: none;">
         <div class="w-24 h-24 bg-emerald-50 rounded-[2.5rem] flex items-center justify-center mb-8 text-emerald-500 shadow-inner">
@@ -314,6 +410,9 @@
         }
 
         function showExpiredOrInvalid(title, msg) {
+            stopValidityTimer();
+            isSubmitting = false;
+            hideElement('submittingOverlay');
             hideElement('loader');
             hideElement('main');
             hideElement('termsOverlay');
@@ -336,6 +435,80 @@
         let lastFocusTime = 0;
         let turnstileVerified = false;
         let turnstileToken = '';
+        let linkExpiresAtMs = null;
+        let validityTimerId = null;
+        let isSubmitting = false;
+
+        function formatValidityRemaining(remainingMs) {
+            const totalSeconds = Math.max(0, Math.floor(remainingMs / 1000));
+            const days = Math.floor(totalSeconds / 86400);
+            const hours = Math.floor((totalSeconds % 86400) / 3600);
+            const mins = Math.floor((totalSeconds % 3600) / 60);
+            const secs = totalSeconds % 60;
+
+            if (days > 0) {
+                return `${days} ${days === 1 ? 'day' : 'days'}, ${hours} ${hours === 1 ? 'hour' : 'hours'}`;
+            }
+            if (hours > 0) {
+                return `${hours} ${hours === 1 ? 'hour' : 'hours'}, ${mins} ${mins === 1 ? 'min' : 'mins'}`;
+            }
+            if (mins > 0) {
+                return `${mins} ${mins === 1 ? 'min' : 'mins'}, ${secs} sec`;
+            }
+            return `${secs} sec`;
+        }
+
+        function stopValidityTimer() {
+            if (validityTimerId !== null) {
+                clearInterval(validityTimerId);
+                validityTimerId = null;
+            }
+        }
+
+        function updateValidityBadge() {
+            if (!linkExpiresAtMs || Number.isNaN(linkExpiresAtMs)) return;
+            const badge = document.getElementById('linkValidityBadge');
+            const dot = document.getElementById('linkValidityDot');
+            const textEl = document.getElementById('linkValidityText');
+            if (!badge || !textEl) return;
+
+            const remainingMs = linkExpiresAtMs - Date.now();
+            if (remainingMs <= 0) {
+                stopValidityTimer();
+                textEl.textContent = 'Link Validity: 0 sec';
+                if (!isSubmitting) {
+                    showExpiredOrInvalid(
+                        "Signing Link Expired",
+                        "This signing link has reached its expiration time. Please request a fresh link from your administrator."
+                    );
+                }
+                return;
+            }
+
+            textEl.textContent = `Link Validity: ${formatValidityRemaining(remainingMs)}`;
+            showElement('linkValidityBadge', 'inline-flex');
+
+            if (remainingMs < 5 * 60 * 1000) {
+                badge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50/90 backdrop-blur-sm border border-rose-200 shadow-sm text-[10px] font-semibold text-rose-600 transition-colors";
+                if (dot) dot.className = "w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shrink-0";
+            } else if (remainingMs < 60 * 60 * 1000) {
+                badge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50/90 backdrop-blur-sm border border-amber-200 shadow-sm text-[10px] font-semibold text-amber-700 transition-colors";
+                if (dot) dot.className = "w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0";
+            } else {
+                badge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/85 backdrop-blur-sm border border-slate-200/80 shadow-sm text-[10px] font-semibold text-slate-500 transition-colors";
+                if (dot) dot.className = "w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0";
+            }
+        }
+
+        function startValidityTimer(expiresAtIso) {
+            stopValidityTimer();
+            if (!expiresAtIso) return;
+            const parsedMs = Date.parse(expiresAtIso);
+            if (Number.isNaN(parsedMs)) return;
+            linkExpiresAtMs = parsedMs;
+            updateValidityBadge();
+            validityTimerId = setInterval(updateValidityBadge, 1000);
+        }
 
         const canvas = document.getElementById('sigPad');
         const ctx = canvas.getContext('2d');
@@ -417,6 +590,7 @@
                         id: result.reference_id || draftId,
                         draft_id: result.reference_id || draftId,
                     };
+                    startValidityTimer(result.expires_at);
                     renderUI();
                     const loader = document.getElementById('loader');
                     if (loader) {
@@ -801,6 +975,8 @@
             const btn = document.getElementById('submitBtn');
             btn.disabled = true;
             btn.innerText = "Submitting...";
+            isSubmitting = true;
+            showElement('submittingOverlay', 'flex');
 
             const signerName = document.getElementById('signerName').value.trim();
             const signerAddress = document.getElementById('signerAddress').value.trim();
@@ -845,6 +1021,9 @@
 
                 if (!resolvedResult || resolvedResult.success === false) {
                     if (resolvedResult?.already_signed) {
+                        isSubmitting = false;
+                        stopValidityTimer();
+                        hideElement('submittingOverlay');
                         hideElement('signingOverlay');
                         hideElement('main');
                         const nameEl = document.getElementById('signedSignerName');
@@ -861,8 +1040,10 @@
                         return;
                     }
                     if (resolvedResult?.turnstile_failed) {
+                        isSubmitting = false;
                         btn.disabled = false;
                         btn.innerText = "Submit Final";
+                        hideElement('submittingOverlay');
                         hideElement('signingOverlay');
                         hideElement('termsOverlay');
                         if (typeof window.turnstile !== 'undefined' && typeof window.turnstile.reset === 'function') {
@@ -879,11 +1060,16 @@
                     throw new Error(resolvedResult?.error || "Signature submission failed.");
                 }
 
+                isSubmitting = false;
+                stopValidityTimer();
+                hideElement('submittingOverlay');
                 hideElement('signingOverlay');
                 hideElement('main');
                 showElement('successScreen', 'flex');
             } catch (e) {
                 console.error("Supabase submit signature error:", e);
+                isSubmitting = false;
+                hideElement('submittingOverlay');
                 showSigningError("Submission could not be completed: " + (e.message || e));
                 btn.disabled = false;
                 btn.innerText = "Submit Final";
