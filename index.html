@@ -366,7 +366,7 @@
             companyParam = parsed.companyId;
             signingToken = parsed.signingToken;
 
-            if (!draftId || draftId === 'undefined' || draftId === 'null' || !companyParam) {
+            if (!draftId || draftId === 'undefined' || draftId === 'null' || !companyParam || !signingToken) {
                 clearTimeout(pageTimeout);
                 showExpiredOrInvalid(
                     "Invalid or Incomplete Link",
@@ -374,6 +374,13 @@
                 );
                 return;
             }
+
+            // Scrub sensitive single-use token from browser URL bar / Referer history after reading into memory
+            try {
+                if (window.history && typeof window.history.replaceState === 'function') {
+                    window.history.replaceState(null, '', window.location.pathname);
+                }
+            } catch (_) {}
 
             try {
                 const sClient = window.supabase;
@@ -388,7 +395,7 @@
                     {
                         p_draft_id: draftId,
                         p_company_id: companyParam,
-                        p_signing_token: signingToken || null,
+                        p_signing_token: signingToken,
                     }
                 );
 
@@ -762,7 +769,16 @@
                 : turnstileToken;
             if (!activeToken) {
                 hideElement('signingOverlay');
-                showMainFormError("Your security verification expired. Please complete Turnstile again before signing.");
+                hideElement('termsOverlay');
+                if (typeof window.turnstile !== 'undefined' && typeof window.turnstile.reset === 'function') {
+                    try {
+                        window.turnstile.reset();
+                        turnstileVerified = false;
+                        turnstileToken = '';
+                        updateReviewButton();
+                    } catch (_) {}
+                }
+                showMainFormError("Your security verification expired. Please complete the Cloudflare Turnstile box below, then tap Review Agreement to submit your saved signature.");
                 return;
             }
 
@@ -812,19 +828,23 @@
                     }
                 );
 
+                let resolvedResult = submitRes;
                 if (submitErr) {
                     let parsedMsg = submitErr.message || "Submission failed";
                     try {
                         if (submitErr.context && typeof submitErr.context.json === 'function') {
                             const errJson = await submitErr.context.json();
+                            if (errJson) resolvedResult = errJson;
                             if (errJson?.error) parsedMsg = errJson.error;
                         }
                     } catch (_) {}
-                    throw new Error(parsedMsg);
+                    if (!resolvedResult || (!resolvedResult.already_signed && !resolvedResult.expired_or_invalid && !resolvedResult.turnstile_failed)) {
+                        throw new Error(parsedMsg);
+                    }
                 }
 
-                if (!submitRes || submitRes.success === false) {
-                    if (submitRes?.already_signed) {
+                if (!resolvedResult || resolvedResult.success === false) {
+                    if (resolvedResult?.already_signed) {
                         hideElement('signingOverlay');
                         hideElement('main');
                         const nameEl = document.getElementById('signedSignerName');
@@ -836,11 +856,27 @@
                         showElement('alreadySignedScreen', 'flex');
                         return;
                     }
-                    if (submitRes?.expired_or_invalid) {
-                        showExpiredOrInvalid("Link Expired or Invalid", submitRes.error || "This signing link is no longer valid.");
+                    if (resolvedResult?.expired_or_invalid) {
+                        showExpiredOrInvalid("Link Expired or Invalid", resolvedResult.error || "This signing link is no longer valid.");
                         return;
                     }
-                    throw new Error(submitRes?.error || "Signature submission failed.");
+                    if (resolvedResult?.turnstile_failed) {
+                        btn.disabled = false;
+                        btn.innerText = "Submit Final";
+                        hideElement('signingOverlay');
+                        hideElement('termsOverlay');
+                        if (typeof window.turnstile !== 'undefined' && typeof window.turnstile.reset === 'function') {
+                            try {
+                                window.turnstile.reset();
+                                turnstileVerified = false;
+                                turnstileToken = '';
+                                updateReviewButton();
+                            } catch (_) {}
+                        }
+                        showMainFormError(resolvedResult.error || "Security challenge expired. Please complete Turnstile verification again, then tap Review Agreement to submit your saved signature.");
+                        return;
+                    }
+                    throw new Error(resolvedResult?.error || "Signature submission failed.");
                 }
 
                 hideElement('signingOverlay');
@@ -851,13 +887,6 @@
                 showSigningError("Submission could not be completed: " + (e.message || e));
                 btn.disabled = false;
                 btn.innerText = "Submit Final";
-                if (typeof window.turnstile !== 'undefined' && typeof window.turnstile.reset === 'function') {
-                    try {
-                        window.turnstile.reset();
-                        turnstileVerified = false;
-                        turnstileToken = '';
-                    } catch (_) {}
-                }
             }
         }
     </script>
